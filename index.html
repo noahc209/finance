@@ -1,0 +1,3249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Finance">
+  <meta name="theme-color" content="#0f1117">
+  <title>Finance Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg: #0f1117; --card: #1a1d27; --card2: #222632;
+      --text: #e8eaf0; --dim: #8b8fa3; --border: #2a2e3d;
+      --blue: #4a9eff; --green: #34d399; --red: #f87171;
+      --gold: #fbbf24; --purple: #a78bfa;
+      --neg: #ef4444; --pos: #22c55e;
+    }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,'SF Pro','Helvetica Neue',sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      padding-bottom:80px;
+    }
+    .tab-bar {
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      display:flex;
+      background:#111320;
+      border-top:1px solid var(--border);
+      z-index:100;
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    .tab-btn {
+      flex:1;
+      padding:8px 2px 5px;
+      text-align:center;
+      font-size:9px;
+      color:var(--dim);
+      border:none;
+      background:none;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .tab-btn.active {
+      color:var(--blue);
+    }
+    .tab-btn svg {
+      display:block;
+      margin:0 auto 3px;
+      width:20px;
+      height:20px;
+    }
+    .range-selector {
+      display:flex;
+      gap:4px;
+      margin-bottom:14px;
+      background:var(--card2);
+      border-radius:10px;
+      padding:4px;
+    }
+    .range-btn {
+      flex:1;
+      padding:6px 4px;
+      border:none;
+      border-radius:7px;
+      background:none;
+      color:var(--dim);
+      font-size:12px;
+      font-weight:600;
+      cursor:pointer;
+      transition:.15s;
+    }
+    .range-btn.active {
+      background:var(--blue);
+      color:#fff;
+    }
+    .chart-tooltip-value {
+      font-size:28px;
+      font-weight:700;
+      margin-bottom:2px;
+    }
+    .chart-tooltip-label {
+      font-size:12px;
+      color:var(--dim);
+      margin-bottom:12px;
+    }
+    .analytics-section-title {
+      font-size:13px;
+      font-weight:700;
+      color:var(--dim);
+      text-transform:uppercase;
+      letter-spacing:.8px;
+      margin:20px 0 10px;
+    }
+    .stock-picker-row {
+      display:flex;
+      gap:6px;
+      overflow-x:auto;
+      padding-bottom:12px;
+      margin-bottom:4px;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    .stock-picker-row::-webkit-scrollbar { display:none; }
+    .stock-pick-btn {
+      flex-shrink:0;
+      padding:6px 16px;
+      border-radius:20px;
+      border:1.5px solid var(--border);
+      background:none;
+      color:var(--dim);
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      white-space:nowrap;
+      transition:.15s;
+    }
+    .stock-pick-btn.active {
+      background:var(--purple);
+      border-color:var(--purple);
+      color:#fff;
+    }
+    .stock-stats-row {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin-top:12px;
+      padding-top:12px;
+      border-top:1px solid var(--border);
+    }
+    .stock-stat {
+      text-align:center;
+    }
+    .stock-stat-label {
+      font-size:11px;
+      color:var(--dim);
+      margin-bottom:2px;
+    }
+    .stock-stat-val {
+      font-size:14px;
+      font-weight:700;
+    }
+    .page {
+      display:none;
+      padding:16px;
+      padding-top:max(16px, env(safe-area-inset-top));
+    }
+    .page.active {
+      display:block;
+    }
+    .card {
+      background:var(--card);
+      border-radius:14px;
+      padding:16px;
+      margin-bottom:12px;
+    }
+    .card-title {
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      color:var(--dim);
+      margin-bottom:10px;
+      font-weight:600;
+    }
+    h1 {
+      font-size:22px;
+      font-weight:700;
+      margin-bottom:4px;
+    }
+    .subtitle {
+      color:var(--dim);
+      font-size:13px;
+      margin-bottom:16px;
+    }
+    .big-number {
+      font-size:32px;
+      font-weight:700;
+      letter-spacing:-1px;
+    }
+    .big-number.negative {
+      color:var(--red);
+    }
+    .big-number.positive {
+      color:var(--green);
+    }
+    .stat-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:8px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .stat-row:last-child {
+      border-bottom:none;
+    }
+    .stat-label {
+      font-size:14px;
+      color:var(--dim);
+    }
+    .stat-value {
+      font-size:14px;
+      font-weight:600;
+      text-align:right;
+    }
+    .stat-value.debt {
+      color:var(--red);
+    }
+    .stat-value.asset {
+      color:var(--green);
+    }
+    .stat-value.info {
+      color:var(--blue);
+    }
+    .stat-value.gold {
+      color:var(--gold);
+    }
+    .grid-2 {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .mini-card {
+      background:var(--card);
+      border-radius:12px;
+      padding:14px;
+      text-align:center;
+    }
+    .mini-card .label {
+      font-size:11px;
+      color:var(--dim);
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      margin-bottom:6px;
+    }
+    .mini-card .value {
+      font-size:20px;
+      font-weight:700;
+    }
+    .section-header {
+      font-size:13px;
+      font-weight:700;
+      color:var(--blue);
+      text-transform:uppercase;
+      letter-spacing:1px;
+      margin:20px 0 10px;
+    }
+    .input-group {
+      margin-bottom:12px;
+    }
+    .input-group label {
+      display:block;
+      font-size:12px;
+      color:var(--dim);
+      margin-bottom:4px;
+      font-weight:500;
+    }
+    .input-group input,
+    .input-group select {
+      width:100%;
+      padding:12px;
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:10px;
+      color:var(--text);
+      font-size:16px;
+      -webkit-appearance:none;
+    }
+    .input-group input:focus {
+      border-color:var(--blue);
+      outline:none;
+    }
+    .input-row {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .btn {
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      font-size:16px;
+      font-weight:600;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .btn-primary {
+      background:var(--blue);
+      color:#fff;
+    }
+    .btn-primary:active {
+      background:#3a7fd4;
+      transform:scale(.98);
+    }
+    .btn-danger {
+      background:var(--red);
+      color:#fff;
+      margin-top:8px;
+    }
+    .btn-secondary {
+      background:var(--card2);
+      color:var(--text);
+      border:1px solid var(--border);
+    }
+    .log-entry {
+      background:var(--card);
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:10px;
+      border-left:3px solid var(--border);
+    }
+    .log-date {
+      font-size:13px;
+      font-weight:600;
+      color:var(--blue);
+      margin-bottom:6px;
+    }
+    .log-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:4px 12px;
+    }
+    .log-item {
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+    }
+    .log-item .k {
+      color:var(--dim);
+    }
+    .log-summary {
+      display:flex;
+      justify-content:space-between;
+      margin-top:8px;
+      padding-top:8px;
+      border-top:1px solid var(--border);
+    }
+    .log-summary span {
+      font-size:13px;
+      font-weight:600;
+    }
+    .badge {
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:6px;
+      font-size:11px;
+      font-weight:600;
+    }
+    .badge-red {
+      background:rgba(248,113,113,.15);
+      color:var(--red);
+    }
+    .badge-green {
+      background:rgba(52,211,153,.15);
+      color:var(--green);
+    }
+    .settings-item {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .settings-item:last-child {
+      border-bottom:none;
+    }
+    .settings-item label {
+      font-size:14px;
+      flex:1;
+    }
+    .settings-item input {
+      width:100px;
+      padding:8px;
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:8px;
+      color:var(--text);
+      font-size:14px;
+      text-align:right;
+      -webkit-appearance:none;
+    }
+    .monthly-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:10px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .monthly-row:last-child {
+      border-bottom:none;
+    }
+    .monthly-month {
+      font-size:14px;
+      font-weight:500;
+    }
+    .monthly-vals {
+      text-align:right;
+    }
+    .monthly-vals .earned {
+      color:var(--green);
+      font-size:13px;
+    }
+    .monthly-vals .spent {
+      color:var(--red);
+      font-size:13px;
+    }
+    .monthly-vals .net {
+      font-weight:600;
+      font-size:14px;
+      margin-top:2px;
+    }
+    .toast {
+      position:fixed;
+      top:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#22c55e;
+      color:#fff;
+      padding:10px 24px;
+      border-radius:10px;
+      font-size:14px;
+      font-weight:600;
+      z-index:200;
+      opacity:0;
+      transition:opacity .3s;
+      pointer-events:none;
+    }
+    .toast.show {
+      opacity:1;
+    }
+    .search-wrap {
+      position:relative;
+    }
+    .search-results {
+      position:absolute;
+      top:100%;
+      left:0;
+      right:0;
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:0 0 10px 10px;
+      max-height:200px;
+      overflow-y:auto;
+      z-index:50;
+      display:none;
+    }
+    .search-results.open {
+      display:block;
+    }
+    .search-result-item {
+      padding:12px;
+      border-bottom:1px solid var(--border);
+      cursor:pointer;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .search-result-item:active {
+      background:var(--border);
+    }
+    .search-result-item .ticker {
+      font-weight:700;
+      color:var(--blue);
+      font-size:14px;
+    }
+    .search-result-item .name {
+      font-size:12px;
+      color:var(--dim);
+      margin-top:2px;
+    }
+    .stock-card {
+      background:var(--card2);
+      border-radius:10px;
+      padding:12px;
+      margin-bottom:8px;
+    }
+    .stock-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+    }
+    .stock-ticker {
+      font-weight:700;
+      color:var(--blue);
+      font-size:15px;
+    }
+    .stock-remove {
+      background:none;
+      border:none;
+      color:var(--red);
+      font-size:16px;
+      cursor:pointer;
+      padding:4px 8px;
+    }
+    .stock-details {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:4px 10px;
+      font-size:12px;
+    }
+    .stock-details .sd-label {
+      color:var(--dim);
+    }
+    #lock-screen {
+      position:fixed;
+      inset:0;
+      background:var(--bg);
+      z-index:9999;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+    }
+    #lock-screen.hidden {
+      display:none;
+    }
+    .lock-icon {
+      width:48px;
+      height:48px;
+      margin-bottom:16px;
+      color:var(--blue);
+    }
+    .lock-title {
+      font-size:22px;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+    .lock-sub {
+      font-size:13px;
+      color:var(--dim);
+      margin-bottom:28px;
+    }
+    .pin-dots {
+      display:flex;
+      gap:16px;
+      margin-bottom:32px;
+    }
+    .pin-dot {
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      border:2px solid var(--border);
+      transition:all .2s;
+    }
+    .pin-dot.filled {
+      background:var(--blue);
+      border-color:var(--blue);
+    }
+    .pin-dot.error {
+      border-color:var(--red);
+      background:var(--red);
+    }
+    .pin-pad {
+      display:grid;
+      grid-template-columns:repeat(3, 72px);
+      gap:12px;
+    }
+    .pin-key {
+      width:72px;
+      height:72px;
+      border-radius:50%;
+      border:1px solid var(--border);
+      background:var(--card);
+      color:var(--text);
+      font-size:28px;
+      font-weight:500;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:all .15s;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+    }
+    .pin-key:active {
+      background:var(--blue);
+      border-color:var(--blue);
+      transform:scale(.93);
+    }
+    .pin-key.fn {
+      font-size:13px;
+      font-weight:600;
+      border:none;
+      background:none;
+      color:var(--dim);
+    }
+    .pin-key.fn:active {
+      color:var(--text);
+      background:none;
+      transform:none;
+    }
+    .lock-error-msg {
+      color:var(--red);
+      font-size:13px;
+      height:18px;
+      margin-top:16px;
+    }
+    @keyframes shake {
+      0%, 100% { transform:translateX(0); }
+      20%, 60% { transform:translateX(-8px); }
+      40%, 80% { transform:translateX(8px); }
+    }
+    .pin-dots.shake {
+      animation:shake .4s;
+    }
+    .progress-bar {
+      width:100%;
+      height:6px;
+      background:var(--border);
+      border-radius:3px;
+      overflow:hidden;
+      margin:8px 0;
+    }
+    .progress-fill {
+      height:100%;
+      background:var(--blue);
+      border-radius:3px;
+      transition:width .3s;
+    }
+    .txn-modal {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      z-index:200;
+      align-items:flex-end;
+      justify-content:center;
+    }
+    .txn-modal.open { display:flex; }
+    .txn-sheet {
+      background:var(--card);
+      width:100%;
+      max-width:480px;
+      border-radius:20px 20px 0 0;
+      padding:24px 20px 40px;
+    }
+    .txn-sheet h3 {
+      font-size:18px;
+      font-weight:700;
+      margin-bottom:16px;
+    }
+    .txn-type-row {
+      display:flex;
+      gap:8px;
+      margin-bottom:16px;
+    }
+    .txn-type-btn {
+      flex:1;
+      padding:10px;
+      border-radius:10px;
+      border:2px solid var(--border);
+      background:none;
+      color:var(--dim);
+      font-size:15px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .txn-type-btn.buy.active { border-color:var(--green); color:var(--green); background:rgba(52,211,153,.1); }
+    .txn-type-btn.sell.active { border-color:var(--red); color:var(--red); background:rgba(248,113,113,.1); }
+    .txn-item {
+      background:var(--card2);
+      border-radius:10px;
+      padding:10px 12px;
+      margin-bottom:8px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .txn-item-left { display:flex; flex-direction:column; gap:2px; }
+    .txn-item-ticker { font-weight:700; font-size:15px; }
+    .txn-item-detail { font-size:12px; color:var(--dim); }
+    .txn-item-right { text-align:right; }
+    .txn-item-total { font-weight:700; font-size:15px; }
+    .txn-item-type { font-size:12px; font-weight:600; }
+    .txn-item-type.buy { color:var(--green); }
+    .txn-item-type.sell { color:var(--red); }
+    .txn-tab-row {
+      display:flex;
+      gap:0;
+      margin-bottom:12px;
+      border-radius:10px;
+      overflow:hidden;
+      border:1px solid var(--border);
+    }
+    .txn-tab {
+      flex:1;
+      padding:8px;
+      background:none;
+      border:none;
+      color:var(--dim);
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .txn-tab.active { background:var(--blue); color:#fff; }
+    .quick-add-btn {
+      position:fixed;
+      bottom:90px;
+      right:20px;
+      z-index:99;
+      width:56px;
+      height:56px;
+      border-radius:50%;
+      background:var(--blue);
+      border:none;
+      color:#fff;
+      font-size:28px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:0 4px 12px rgba(74, 158, 255, .4);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      transition:.2s;
+    }
+    .quick-add-btn:active {
+      transform:scale(.9);
+    }
+    .quick-add-btn.visible {
+      display:flex;
+    }
+    .compare-overlay {
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
+      background:rgba(0,0,0,.5);
+      z-index:150;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .compare-card {
+      background:var(--card);
+      border-radius:14px;
+      padding:20px;
+      max-height:80vh;
+      overflow-y:auto;
+      width:100%;
+    }
+    .compare-header {
+      font-size:14px;
+      font-weight:600;
+      color:var(--blue);
+      margin-bottom:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .compare-close {
+      background:none;
+      border:none;
+      color:var(--dim);
+      font-size:24px;
+      cursor:pointer;
+    }
+    .compare-row {
+      display:grid;
+      grid-template-columns:100px 1fr 50px 1fr;
+      gap:8px;
+      padding:8px 0;
+      border-bottom:1px solid var(--border);
+      font-size:13px;
+    }
+    .compare-row:last-child {
+      border-bottom:none;
+    }
+    .compare-label {
+      color:var(--dim);
+      font-weight:600;
+    }
+    .compare-val {
+      text-align:right;
+    }
+    .compare-arrow {
+      text-align:center;
+      color:var(--dim);
+    }
+    .compare-arrow.up {
+      color:var(--green);
+    }
+    .compare-arrow.down {
+      color:var(--red);
+    }
+    .toggle-switch {
+      width:44px;
+      height:24px;
+      border-radius:12px;
+      background:var(--card2);
+      border:1px solid var(--border);
+      position:relative;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .toggle-switch.on {
+      background:var(--blue);
+      border-color:var(--blue);
+    }
+    .toggle-circle {
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      background:#fff;
+      position:absolute;
+      top:2px;
+      left:2px;
+      transition:.2s;
+    }
+    .toggle-switch.on .toggle-circle {
+      left:22px;
+    }
+    .toggle-buttons {
+      display:flex;
+      gap:8px;
+      margin-bottom:12px;
+    }
+    .toggle-buttons button {
+      flex:1;
+      padding:10px;
+      border:1px solid var(--border);
+      background:var(--card2);
+      color:var(--dim);
+      border-radius:8px;
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .toggle-buttons button.active {
+      background:var(--blue);
+      color:#fff;
+      border-color:var(--blue);
+    }
+    .bill-row {
+      display:grid;
+      grid-template-columns:1fr 100px 40px;
+      gap:8px;
+      align-items:center;
+      padding:10px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .bill-row:last-child {
+      border-bottom:none;
+    }
+    .bill-name {
+      font-size:14px;
+      color:var(--text);
+      background:none;
+      border:none;
+      padding:0;
+      cursor:text;
+      outline:none;
+      min-width:0;
+    }
+    .bill-name:focus {
+      text-decoration:underline;
+      color:var(--blue);
+    }
+    .bill-amount {
+      font-size:14px;
+      text-align:right;
+      background:none;
+      border:none;
+      color:var(--text);
+      padding:0;
+      cursor:text;
+      outline:none;
+    }
+    .bill-amount:focus {
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:6px;
+      padding:4px 8px;
+      color:var(--blue);
+    }
+    .bill-remove {
+      background:none;
+      border:none;
+      color:var(--red);
+      font-size:18px;
+      cursor:pointer;
+      padding:0;
+    }
+    .chart-container {
+      position:relative;
+      width:100%;
+      height:200px;
+      margin-bottom:12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="lock-screen" class="hidden">
+    <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    <div class="lock-title">Finance Locked</div>
+    <div class="lock-sub">Enter your PIN</div>
+    <div class="pin-dots" id="pinDots"></div>
+    <div class="pin-pad" id="pinPad"></div>
+    <div class="lock-error-msg" id="lockErrorMsg"></div>
+  </div>
+  <div id="dashboard-page" class="page active">
+    <h1>Finance Dashboard</h1>
+    <div class="subtitle" id="dashSubtitle"></div>
+    <div class="card" style="text-align:center;">
+      <div class="card-title">Net Worth</div>
+      <div style="margin-bottom:12px;">
+        <div class="big-number" id="nwDisplay">$0</div>
+        <div style="font-size:12px; color:var(--dim); margin-top:8px;" id="nwChange"></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="mini-card">
+        <div class="label">Total Assets</div>
+        <div class="value" style="color:var(--green);" id="totalAssetsDisplay">$0</div>
+      </div>
+      <div class="mini-card">
+        <div class="label">Total Debt</div>
+        <div class="value" style="color:var(--red);" id="totalDebtDisplay">$0</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly Cash Flow</div>
+      <div class="stat-row">
+        <span class="stat-label">Income</span>
+        <span class="stat-value asset" id="cfIncomeDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Fixed Bills</span>
+        <span class="stat-value debt" id="cfBillsDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">APR Interest</span>
+        <span class="stat-value debt" id="cfInterestDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Leftover</span>
+        <span class="stat-value" id="cfLeftoverDisplay" style="color:var(--gold);">$0</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Debt Breakdown</div>
+      <div class="stat-row">
+        <span class="stat-label">Amex Platinum</span>
+        <span class="stat-value debt" id="debtAmexDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Robinhood</span>
+        <span class="stat-value debt" id="debtRhDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">BofA APR</span>
+        <span class="stat-value debt" id="debtBoaDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Alaska Air</span>
+        <span class="stat-value debt" id="debtAlaskaDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Apple Card</span>
+        <span class="stat-value debt" id="debtAppleDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">BofA 0%</span>
+        <span class="stat-value debt" id="debtBoa0Display">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Citi 0%</span>
+        <span class="stat-value debt" id="debtCiti0Display">$0</span>
+      </div>
+      <div class="stat-row" style="border-bottom:none; margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+        <span class="stat-label" style="font-weight:700;">Total Debt</span>
+        <span class="stat-value debt" style="font-weight:700;" id="totalDebtBreakdownDisplay">$0</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Asset Breakdown</div>
+      <div id="assetBreakdownContent"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock Portfolio</div>
+      <div id="stockPortfolioContent"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly Interest by Card</div>
+      <div class="stat-row">
+        <span class="stat-label">Amex Platinum</span>
+        <span class="stat-value debt" id="intAmexDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Robinhood</span>
+        <span class="stat-value debt" id="intRhDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">BofA APR</span>
+        <span class="stat-value debt" id="intBoaDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Alaska Air</span>
+        <span class="stat-value debt" id="intAlaskaDisplay">$0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Apple Card</span>
+        <span class="stat-value debt" id="intAppleDisplay">$0</span>
+      </div>
+    </div>
+  </div>
+  <!-- ═══ ANALYTICS PAGE ═══ -->
+  <div id="analytics-page" class="page">
+    <h1>Analytics</h1>
+    <div class="subtitle">Trends, projections &amp; insights</div>
+    <div class="analytics-section-title">Net Worth Trend</div>
+    <div class="card">
+      <div id="nwChartValue" class="chart-tooltip-value">—</div>
+      <div id="nwChartLabel" class="chart-tooltip-label">All time</div>
+      <div class="range-selector">
+        <button class="range-btn" onclick="setChartRange('nw','1W')">1W</button>
+        <button class="range-btn" onclick="setChartRange('nw','1M')">1M</button>
+        <button class="range-btn" onclick="setChartRange('nw','3M')">3M</button>
+        <button class="range-btn" onclick="setChartRange('nw','1Y')">1Y</button>
+        <button class="range-btn active" onclick="setChartRange('nw','ALL')">ALL</button>
+      </div>
+      <div class="chart-container"><canvas id="nwTrendChart"></canvas></div>
+    </div>
+    <div class="analytics-section-title">Debt Paydown</div>
+    <div class="card">
+      <div id="debtChartValue" class="chart-tooltip-value">—</div>
+      <div id="debtChartLabel" class="chart-tooltip-label">All time</div>
+      <div class="range-selector">
+        <button class="range-btn" onclick="setChartRange('debt','1W')">1W</button>
+        <button class="range-btn" onclick="setChartRange('debt','1M')">1M</button>
+        <button class="range-btn" onclick="setChartRange('debt','3M')">3M</button>
+        <button class="range-btn" onclick="setChartRange('debt','1Y')">1Y</button>
+        <button class="range-btn active" onclick="setChartRange('debt','ALL')">ALL</button>
+      </div>
+      <div class="chart-container"><canvas id="debtTrendChart"></canvas></div>
+    </div>
+    <div class="analytics-section-title">Portfolio</div>
+    <div class="card">
+      <div id="stockPickerRow" class="stock-picker-row"></div>
+      <div id="stockChartValue" class="chart-tooltip-value">—</div>
+      <div id="stockChartLabel" class="chart-tooltip-label">All time</div>
+      <div class="range-selector">
+        <button class="range-btn" onclick="setChartRange('stock','1W')">1W</button>
+        <button class="range-btn" onclick="setChartRange('stock','1M')">1M</button>
+        <button class="range-btn" onclick="setChartRange('stock','3M')">3M</button>
+        <button class="range-btn" onclick="setChartRange('stock','1Y')">1Y</button>
+        <button class="range-btn active" onclick="setChartRange('stock','ALL')">ALL</button>
+      </div>
+      <div class="chart-container"><canvas id="stockTrendChart"></canvas></div>
+      <div id="stockTxnLegend" style="margin-top:8px; font-size:12px; color:var(--dim); display:flex; gap:16px; flex-wrap:wrap;"></div>
+      <div id="stockStatsRow" class="stock-stats-row" style="display:none;"></div>
+    </div>
+    <div class="analytics-section-title">Debt Payoff Projections</div>
+    <div id="payoffCard" class="card" style="display:none;">
+      <div class="toggle-buttons" id="payoffToggle">
+        <button class="active" data-strategy="avalanche">Avalanche</button>
+        <button data-strategy="snowball">Snowball</button>
+      </div>
+      <div id="payoffContent"></div>
+    </div>
+    <div id="payoffEmpty" class="card" style="display:none;">
+      <div style="color:var(--dim); font-size:14px; text-align:center; padding:8px 0;">Not enough data for projections yet.</div>
+    </div>
+    <div class="analytics-section-title">Promo Rate Alerts</div>
+    <div id="promoCard" class="card" style="display:none;">
+      <div id="promoContent"></div>
+    </div>
+    <div class="analytics-section-title">Milestones</div>
+    <div id="milestonesCard" class="card" style="display:none;">
+      <div id="milestonesContent"></div>
+    </div>
+  </div>
+  <div id="entry-page" class="page">
+    <h1 id="entryTitle">New Entry</h1>
+    <div class="subtitle">Record today's financial snapshot</div>
+    <div class="input-group">
+      <label>Date</label>
+      <input type="date" id="entryDate">
+    </div>
+    <div class="section-header">APR Debt Balances</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Amex Platinum</label>
+        <input type="number" id="entryAmex" placeholder="0" min="0">
+      </div>
+      <div class="input-group">
+        <label>Robinhood</label>
+        <input type="number" id="entryRh" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>BofA APR</label>
+        <input type="number" id="entryBoa" placeholder="0" min="0">
+      </div>
+      <div class="input-group">
+        <label>Alaska Air</label>
+        <input type="number" id="entryAlaska" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Apple Card</label>
+      <input type="number" id="entryApple" placeholder="0" min="0">
+    </div>
+    <div class="section-header">0% Promo Debt Balances</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>BofA 0%</label>
+        <input type="number" id="entryBoa0" placeholder="0" min="0">
+      </div>
+      <div class="input-group">
+        <label>Citi 0%</label>
+        <input type="number" id="entryCiti0" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="section-header">Stock Portfolio</div>
+    <div id="entryStocksContent"></div>
+    <div class="search-wrap" style="margin-top:8px; margin-bottom:4px;">
+      <input type="text" id="entry-stock-search" placeholder="Add stock to portfolio..." style="width:100%; padding:12px; background:var(--card2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:16px; box-sizing:border-box;">
+      <div id="entry-stock-results" class="search-results"></div>
+    </div>
+    <div id="stockPricesSection" class="section-header">Stock Prices</div>
+    <div id="stockPricesContent"></div>
+    <div class="section-header">Stock Transaction <span style="font-size:11px; color:var(--dim); font-weight:400;">(optional)</span></div>
+    <div id="entryTxnSection" style="background:var(--card2); border-radius:12px; padding:14px; margin-bottom:12px;">
+      <div class="txn-type-row" style="margin-bottom:12px;">
+        <button class="txn-type-btn buy active" id="entry-txn-buy-btn" onclick="setEntryTxnType('buy')">Buy</button>
+        <button class="txn-type-btn sell" id="entry-txn-sell-btn" onclick="setEntryTxnType('sell')">Sell</button>
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Stock</label>
+          <select id="entryTxnTicker" style="width:100%; padding:12px; background:var(--card); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:15px;"></select>
+        </div>
+        <div class="input-group">
+          <label>Shares</label>
+          <input type="number" id="entryTxnShares" placeholder="0" min="0" step="0.001">
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Price / Share</label>
+          <input type="number" id="entryTxnPrice" placeholder="0.00" step="0.01">
+        </div>
+        <div class="input-group">
+          <label>Notes</label>
+          <input type="text" id="entryTxnNotes" placeholder="Optional">
+        </div>
+      </div>
+      <div id="entryTxnSummary" style="font-size:12px; color:var(--dim); margin-top:4px; min-height:16px;"></div>
+    </div>
+    <div class="section-header">Other Assets</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Work Tab</label>
+        <input type="number" id="entryWork" placeholder="0" min="0">
+      </div>
+      <div class="input-group">
+        <label>Personal Tab</label>
+        <input type="number" id="entryPersonal" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Cash</label>
+        <input type="number" id="entryCash" placeholder="0" min="0">
+      </div>
+      <div class="input-group">
+        <label>Bank</label>
+        <input type="number" id="entryBank" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="section-header">Cash Flow</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Earned</label>
+        <input type="number" id="entryEarned" placeholder="0" min="0">
+      </div>
+      <div class="input-group">
+        <label>Spent</label>
+        <input type="number" id="entrySpent" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Notes</label>
+      <input type="text" id="entryNotes" placeholder="Optional notes about this entry">
+    </div>
+    <button class="btn btn-primary" id="save-btn">Save Entry</button>
+    <button class="btn btn-secondary" id="cancel-edit-btn" style="display:none; margin-top:8px;">Cancel Edit</button>
+    <button class="btn btn-secondary" id="copy-last-btn" style="margin-top:8px;">Copy Last Entry</button>
+  </div>
+  <div id="log-page" class="page">
+    <h1>Entry History</h1>
+    <div class="subtitle" id="logSubtitle"></div>
+    <div class="txn-tab-row">
+      <button class="txn-tab active" id="tab-entries" onclick="switchLogTab('entries')">Log Entries</button>
+      <button class="txn-tab" id="tab-transactions" onclick="switchLogTab('transactions')">Stock Transactions</button>
+    </div>
+    <div id="log-entries-view">
+      <button class="btn btn-secondary" id="compare-btn" style="margin-bottom:12px;">Compare Entries</button>
+      <div id="logContent"></div>
+    </div>
+    <div id="log-transactions-view" style="display:none;">
+      <button class="btn" id="add-txn-btn" style="margin-bottom:12px; width:100%;">+ Log Transaction</button>
+      <div id="txnContent"></div>
+    </div>
+  </div>
+  <!-- Transaction Modal -->
+  <div class="txn-modal" id="txnModal">
+    <div class="txn-sheet">
+      <h3>Log Stock Transaction</h3>
+      <div class="txn-type-row">
+        <button class="txn-type-btn buy active" id="txn-buy-btn" onclick="setTxnType('buy')">Buy</button>
+        <button class="txn-type-btn sell" id="txn-sell-btn" onclick="setTxnType('sell')">Sell</button>
+      </div>
+      <div class="input-group" style="margin-bottom:12px;">
+        <label>Stock</label>
+        <select id="txnTicker" style="width:100%; padding:12px; background:var(--card2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:16px;"></select>
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Shares</label>
+          <input type="number" id="txnShares" placeholder="0" min="0" step="0.001">
+        </div>
+        <div class="input-group">
+          <label>Price / Share</label>
+          <input type="number" id="txnPrice" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <div class="input-group" style="margin-bottom:16px;">
+        <label>Date</label>
+        <input type="date" id="txnDate">
+      </div>
+      <div class="input-group" style="margin-bottom:16px;">
+        <label>Notes (optional)</label>
+        <input type="text" id="txnNotes" placeholder="e.g. DCA buy">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="closeTxnModal()">Cancel</button>
+        <button class="btn" style="flex:2;" onclick="saveTransaction()">Save Transaction</button>
+      </div>
+    </div>
+  </div>
+  <div id="monthly-page" class="page">
+    <h1>Monthly Summary</h1>
+    <div class="subtitle">Track your net worth by month</div>
+    <div id="monthlyContent"></div>
+  </div>
+  <div id="settings-page" class="page">
+    <h1>Settings</h1>
+    <div class="card">
+      <div class="card-title">Monthly Income</div>
+      <div class="settings-item">
+        <label>Monthly Income</label>
+        <input type="number" id="settingsIncome" min="0" value="6000">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Fixed Monthly Bills</div>
+      <div id="billsContent"></div>
+      <button class="btn btn-secondary" id="add-bill-btn" style="margin-top:12px;">+ Add Bill</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock Portfolio</div>
+      <div id="stocksContent"></div>
+      <div class="search-wrap" style="margin-top:12px;">
+        <input type="text" id="stock-search" placeholder="Add stock..." style="width:100%; padding:12px; background:var(--card2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:16px;">
+        <div id="stock-search-results" class="search-results"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">APR Rates</div>
+      <div class="settings-item">
+        <label>Amex Platinum (%)</label>
+        <input type="number" id="aprAmex" step="0.01" value="28.49">
+      </div>
+      <div class="settings-item">
+        <label>Robinhood (%)</label>
+        <input type="number" id="aprRh" step="0.01" value="28.24">
+      </div>
+      <div class="settings-item">
+        <label>BofA APR (%)</label>
+        <input type="number" id="aprBoa" step="0.01" value="23.49">
+      </div>
+      <div class="settings-item">
+        <label>Alaska Air (%)</label>
+        <input type="number" id="aprAlaska" step="0.01" value="0">
+      </div>
+      <div class="settings-item">
+        <label>Apple Card (%)</label>
+        <input type="number" id="aprApple" step="0.01" value="25.49">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">0% Promo Expirations</div>
+      <div class="settings-item">
+        <label>BofA 0% Expires</label>
+        <input type="date" id="promoBoa">
+      </div>
+      <div class="settings-item">
+        <label>Citi 0% Expires</label>
+        <input type="date" id="promoCiti">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Security</div>
+      <div class="settings-item">
+        <label style="flex:0.6;">PIN Protection</label>
+        <span id="pinStatus" style="font-size:12px; color:var(--dim); flex:0.4;">Not set</span>
+      </div>
+      <button class="btn btn-secondary" id="set-pin-btn" style="margin-top:12px;">Set PIN</button>
+      <button class="btn btn-secondary" id="change-pin-btn" style="display:none; margin-top:8px;">Change PIN</button>
+      <button class="btn btn-secondary" id="remove-pin-btn" style="display:none; margin-top:8px;">Remove PIN</button>
+      <div class="settings-item" style="margin-top:16px;">
+        <label>Auto-Lock (5 min)</label>
+        <div class="toggle-switch" id="autoLockToggle">
+          <div class="toggle-circle"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Data Backup</div>
+      <button class="btn btn-secondary" id="export-btn">Export Data</button>
+      <button class="btn btn-secondary" id="import-btn" style="margin-top:8px;">Import Data</button>
+      <input type="file" id="import-file" accept=".json" style="display:none;">
+    </div>
+    <button class="btn btn-danger" id="reset-btn">Reset All Data</button>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/>
+        <rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>
+      </svg>
+      Dashboard
+    </button>
+    <button class="tab-btn" data-page="entry">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      New Entry
+    </button>
+    <button class="tab-btn" data-page="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2c6.6 0 9 2.4 9 9s-2.4 9-9 9-9-2.4-9-9 2.4-9 9-9"/><path d="M12 6v6l4 2"/>
+      </svg>
+      Log
+    </button>
+    <button class="tab-btn" data-page="monthly">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="8"/>
+      </svg>
+      Monthly
+    </button>
+    <button class="tab-btn" data-page="analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Analytics
+    </button>
+    <button class="tab-btn" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/>
+      </svg>
+      Settings
+    </button>
+  </div>
+  <button class="quick-add-btn" id="quick-add-btn">+</button>
+  <div id="toast" class="toast"></div>
+  <div id="compare-overlay" class="compare-overlay" style="display:none;"></div>
+  <script>
+    function $(id) {
+      return document.getElementById(id);
+    }
+    const DEFAULT_SETTINGS = {
+      income: 6000,
+      bills: [
+        {name:'Rent', amount:875},
+        {name:'Car Insurance', amount:350},
+        {name:'Food', amount:300},
+        {name:'Car Payment', amount:400},
+        {name:'Subscriptions', amount:100},
+        {name:'Laptop', amount:90},
+        {name:'Gas', amount:250},
+        {name:'Misc', amount:200}
+      ],
+      stocks: [
+        {ticker:'GME', name:'GameStop', shares:638, costBasis:15.00, taxRate:20}
+      ],
+      aprs: {amex:28.49, rh:28.24, boa:23.49, alaska:0, apple:25.49},
+      promos: {boa:'2027-03-06', citi:'2027-06-02'},
+      autoLock: true
+    };
+    const DEFAULT_ENTRIES = [{
+      date: '2026-03-26',
+      amex:6970, rh:4910, boa:3130, alaska:1310, apple:925,
+      boa0:9675, citi0:7980,
+      stockPrices: {GME:22.10},
+      work:5655, personal:1580, cash:1900, bank:930,
+      earned:0, spent:0, notes:'Starting balances'
+    }];
+    let settings = {};
+    let entries = [];
+    let editingIndex = -1;
+    let transactions = [];
+    let pinLocked = false;
+    let pinSetup = false;
+    let pinHash = null;
+    let autoLockTimer = null;
+    let lastActivityTime = null;
+    let nwTrendChart = null;
+    let debtTrendChart = null;
+    let stockTrendChart = null;
+    const chartRanges = { nw: 'ALL', debt: 'ALL', stock: 'ALL' };
+    let activeStockView = 'total'; // 'total' or a ticker string like 'GME'
+    function getFilteredEntries(range) {
+      if (range === 'ALL' || entries.length === 0) return entries;
+      const days = {  '1W': 7, '1M': 30, '3M': 90, '1Y': 365 }[range] || 9999;
+      const cutoff = new Date(Date.now() - days * 86400000);
+      return entries.filter(e => new Date(e.date + 'T00:00:00') >= cutoff);
+    }
+    function setChartRange(type, range) {
+      chartRanges[type] = range;
+      // Update button active states for this chart
+      const selectors = { nw: 'nw', debt: 'debt', stock: 'stock' };
+      const btnGroups = document.querySelectorAll(`.range-selector`);
+      btnGroups.forEach(group => {
+        const btns = group.querySelectorAll('.range-btn');
+        btns.forEach(btn => {
+          const onclick = btn.getAttribute('onclick') || '';
+          if (onclick.includes(`'${type}'`)) {
+            btn.classList.toggle('active', onclick.includes(`'${range}'`));
+          }
+        });
+      });
+      if (type === 'nw') renderNWChart();
+      if (type === 'debt') renderDebtChart();
+      if (type === 'stock') renderStockChart();
+    }
+    let compareMode = false;
+    let compareSelections = [];
+    let payoffStrategy = 'avalanche';
+    const STOCK_TICKERS = ['AAPL','MSFT','GOOGL','AMZN','NVDA','TSLA','META','JPM','V','JNJ','WMT','PG','MA','HD','PYPL','NFLX','INTC','AMD','CRM','ADBE'];
+    async function hashPIN(pin) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(pin);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    function fmt(n) {
+      return '$' + Math.round(n).toLocaleString('en-US');
+    }
+    function fmtSigned(n) {
+      return (n >= 0 ? '+' : '') + fmt(n);
+    }
+    function fmtNW(n) {
+      if (n < 0) return '($' + Math.abs(Math.round(n)).toLocaleString('en-US') + ')';
+      return '$' + Math.round(n).toLocaleString('en-US');
+    }
+    function formatDate(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+    }
+    function showToast(msg) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2000);
+    }
+    function calcInterest(entry, settings) {
+      const aprs = settings.aprs;
+      let total = 0;
+      if (entry.amex) total += entry.amex * aprs.amex / 100 / 12;
+      if (entry.rh) total += entry.rh * aprs.rh / 100 / 12;
+      if (entry.boa) total += entry.boa * aprs.boa / 100 / 12;
+      if (entry.alaska) total += entry.alaska * aprs.alaska / 100 / 12;
+      if (entry.apple) total += entry.apple * aprs.apple / 100 / 12;
+      return Math.round(total);
+    }
+    function totalBills(settings) {
+      return Math.round(settings.bills.reduce((s, b) => s + b.amount, 0));
+    }
+    function stockNetValue(entry, settings) {
+      let total = 0;
+      for (let s of settings.stocks) {
+        const price = entry.stockPrices?.[s.ticker] || 0;
+        const value = s.shares * price;
+        total += value;
+      }
+      return Math.round(total);
+    }
+    function stockGross(entry, settings) {
+      let total = 0;
+      for (let s of settings.stocks) {
+        const price = entry.stockPrices?.[s.ticker] || 0;
+        total += s.shares * price;
+      }
+      return Math.round(total);
+    }
+    function stockTax(entry, settings) {
+      let total = 0;
+      for (let s of settings.stocks) {
+        const price = entry.stockPrices?.[s.ticker] || 0;
+        const gain = (price - s.costBasis) * s.shares;
+        if (gain > 0) {
+          total += gain * s.taxRate / 100;
+        }
+      }
+      return Math.round(total);
+    }
+    function calcEntry(entry, settings) {
+      const totalDebt = (entry.amex || 0) + (entry.rh || 0) + (entry.boa || 0) + (entry.alaska || 0) + (entry.apple || 0) + (entry.boa0 || 0) + (entry.citi0 || 0);
+      const stocks = stockNetValue(entry, settings);
+      const totalAssets = stocks + (entry.work || 0) + (entry.personal || 0) + (entry.cash || 0) + (entry.bank || 0);
+      const nw = totalAssets - totalDebt;
+      return {totalDebt, totalAssets, nw};
+    }
+    function migrateData() {
+      const stored = localStorage.getItem('pf_entries');
+      if (!stored) return;
+      let data = JSON.parse(stored);
+      let changed = false;
+      for (let e of data) {
+        if (e.gmePrice !== undefined && !e.stockPrices) {
+          e.stockPrices = {GME: e.gmePrice};
+          delete e.gmePrice;
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem('pf_entries', JSON.stringify(data));
+      }
+    }
+    function load() {
+      migrateData();
+      const s = localStorage.getItem('pf_settings');
+      const e = localStorage.getItem('pf_entries');
+      const p = localStorage.getItem('pf_pin');
+      const t = localStorage.getItem('pf_transactions');
+      settings = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+      entries = e ? JSON.parse(e) : JSON.parse(JSON.stringify(DEFAULT_ENTRIES));
+      transactions = t ? JSON.parse(t) : [];
+      if (p) pinHash = p;
+      mergeDefaults();
+    }
+    function mergeDefaults() {
+      for (let key in DEFAULT_SETTINGS) {
+        if (!(key in settings)) {
+          settings[key] = JSON.parse(JSON.stringify(DEFAULT_SETTINGS[key]));
+        }
+      }
+      if (!settings.autoLock) settings.autoLock = DEFAULT_SETTINGS.autoLock;
+    }
+    function save() {
+      localStorage.setItem('pf_settings', JSON.stringify(settings));
+      localStorage.setItem('pf_entries', JSON.stringify(entries));
+      localStorage.setItem('pf_transactions', JSON.stringify(transactions));
+      if (pinHash) localStorage.setItem('pf_pin', pinHash);
+    }
+    function renderTabs() {
+      const btns = document.querySelectorAll('.tab-btn');
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const page = btn.dataset.page;
+          showTab(page);
+        });
+      });
+    }
+    function showTab(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      $('dashboard-page').classList.toggle('active', page === 'dashboard');
+      $('entry-page').classList.toggle('active', page === 'entry');
+      $('log-page').classList.toggle('active', page === 'log');
+      $('monthly-page').classList.toggle('active', page === 'monthly');
+      $('analytics-page').classList.toggle('active', page === 'analytics');
+      $('settings-page').classList.toggle('active', page === 'settings');
+      const tabBtn = document.querySelector(`[data-page="${page}"]`);
+      if (tabBtn) tabBtn.classList.add('active');
+      if (page === 'entry') autoFillStockPrices();
+      if (page === 'dashboard') renderDashboard();
+      if (page === 'log') renderHistory();
+      if (page === 'monthly') renderMonthly();
+      if (page === 'analytics') renderAnalytics();
+      updateQuickAddBtn();
+    }
+    function renderAnalytics() {
+      renderStockPicker();
+      renderNWChart();
+      renderDebtChart();
+      renderStockChart();
+      renderPayoffProjections();
+      renderPromoAlerts();
+      renderMilestones();
+    }
+    function updateQuickAddBtn() {
+      const btn = $('quick-add-btn');
+      if (document.querySelector('[data-page="dashboard"]').classList.contains('active')) {
+        btn.classList.add('visible');
+      } else {
+        btn.classList.remove('visible');
+      }
+    }
+    function renderDashboard() {
+      if (entries.length === 0) return;
+      const latest = entries[entries.length - 1];
+      const {totalDebt, totalAssets, nw} = calcEntry(latest, settings);
+      const subtitle = formatDate(latest.date);
+      $('dashSubtitle').textContent = `Last updated: ${subtitle}`;
+      $('nwDisplay').textContent = fmtNW(nw);
+      $('nwDisplay').classList.toggle('negative', nw < 0);
+      $('nwDisplay').classList.toggle('positive', nw >= 0);
+      if (entries.length > 1) {
+        const prev = entries[entries.length - 2];
+        const {nw: prevNW} = calcEntry(prev, settings);
+        const change = nw - prevNW;
+        const html = `<span class="badge ${change >= 0 ? 'badge-green' : 'badge-red'}">${fmtSigned(change)}</span>`;
+        $('nwChange').innerHTML = html;
+      } else {
+        $('nwChange').innerHTML = '';
+      }
+      $('totalAssetsDisplay').textContent = fmt(totalAssets);
+      $('totalDebtDisplay').textContent = fmt(totalDebt);
+      const interest = calcInterest(latest, settings);
+      const bills = totalBills(settings);
+      const leftover = settings.income - bills - interest;
+      $('cfIncomeDisplay').textContent = fmt(settings.income);
+      $('cfBillsDisplay').textContent = fmt(bills);
+      $('cfInterestDisplay').textContent = fmt(interest);
+      $('cfLeftoverDisplay').textContent = fmt(leftover);
+      $('debtAmexDisplay').textContent = fmt(latest.amex || 0);
+      $('debtRhDisplay').textContent = fmt(latest.rh || 0);
+      $('debtBoaDisplay').textContent = fmt(latest.boa || 0);
+      $('debtAlaskaDisplay').textContent = fmt(latest.alaska || 0);
+      $('debtAppleDisplay').textContent = fmt(latest.apple || 0);
+      $('debtBoa0Display').textContent = fmt(latest.boa0 || 0);
+      $('debtCiti0Display').textContent = fmt(latest.citi0 || 0);
+      $('totalDebtBreakdownDisplay').textContent = fmt(totalDebt);
+      renderAssetBreakdown();
+      renderStockPortfolio();
+      renderInterestByCard();
+    }
+    function renderAssetBreakdown() {
+      if (entries.length === 0) return;
+      const latest = entries[entries.length - 1];
+      const stocks = stockNetValue(latest, settings);
+      const work = latest.work || 0;
+      const personal = latest.personal || 0;
+      const cash = latest.cash || 0;
+      const bank = latest.bank || 0;
+      const total = stocks + work + personal + cash + bank;
+      let html = '';
+      if (settings.stocks.length > 0) {
+        html += '<div style="margin-bottom:12px;"><span style="font-size:12px; color:var(--dim); text-transform:uppercase; font-weight:600;">Work Tab</span>';
+        for (let s of settings.stocks) {
+          const price = latest.stockPrices?.[s.ticker] || 0;
+          const value = s.shares * price;
+          html += `<div class="stat-row"><span class="stat-label">${s.ticker} (${s.shares} shares)</span><span class="stat-value asset">${fmt(value)}</span></div>`;
+        }
+        html += '</div>';
+      }
+      html += `<div style="margin-bottom:12px;"><span style="font-size:12px; color:var(--dim); text-transform:uppercase; font-weight:600;">Personal Tab</span>
+        <div class="stat-row"><span class="stat-label">Personal Tab</span><span class="stat-value asset">${fmt(personal)}</span></div></div>`;
+      html += `<div style="margin-bottom:12px;"><span style="font-size:12px; color:var(--dim); text-transform:uppercase; font-weight:600;">Cash</span>
+        <div class="stat-row"><span class="stat-label">Cash</span><span class="stat-value asset">${fmt(cash)}</span></div></div>`;
+      html += `<div style="margin-bottom:12px;"><span style="font-size:12px; color:var(--dim); text-transform:uppercase; font-weight:600;">Bank</span>
+        <div class="stat-row"><span class="stat-label">Bank</span><span class="stat-value asset">${fmt(bank)}</span></div></div>`;
+      html += `<div style="border-top:1px solid var(--border); margin-top:8px; padding-top:8px;"><div class="stat-row">
+        <span class="stat-label" style="font-weight:700;">Total Assets</span>
+        <span class="stat-value asset" style="font-weight:700;">${fmt(total)}</span></div></div>`;
+      $('assetBreakdownContent').innerHTML = html;
+    }
+    function renderStockPortfolio() {
+      if (entries.length === 0 || settings.stocks.length === 0) return;
+      const latest = entries[entries.length - 1];
+      let html = '';
+      for (let s of settings.stocks) {
+        const price = latest.stockPrices?.[s.ticker] || 0;
+        const value = s.shares * price;
+        const costTotal = s.shares * s.costBasis;
+        const gain = value - costTotal;
+        const change = (gain / costTotal * 100).toFixed(1);
+        const gross = value;
+        const tax = gain > 0 ? gain * s.taxRate / 100 : 0;
+        const net = gross - tax;
+        html += `<div style="margin-bottom:12px; padding:12px; background:var(--card2); border-radius:10px;">
+          <div style="font-size:14px; font-weight:700; color:var(--blue); margin-bottom:6px;">${s.ticker}</div>
+          <div class="stat-row"><span class="stat-label">Price</span><span class="stat-value">${price.toFixed(2)}</span></div>
+          <div class="stat-row"><span class="stat-label">Daily Change</span><span class="stat-value">${change}%</span></div>
+          <div class="stat-row"><span class="stat-label">Gross Value</span><span class="stat-value asset">${fmt(gross)}</span></div>
+          <div class="stat-row"><span class="stat-label">Tax Liability</span><span class="stat-value debt">${fmt(tax)}</span></div>
+          <div class="stat-row"><span class="stat-label">Net Value</span><span class="stat-value asset">${fmt(net)}</span></div>
+        </div>`;
+      }
+      html += `<button class="btn btn-secondary" id="refresh-prices-btn" style="margin-top:12px;">Refresh All Prices</button>`;
+      $('stockPortfolioContent').innerHTML = html;
+      $('refresh-prices-btn').addEventListener('click', () => {
+        fetchAllStockPrices();
+      });
+    }
+    function renderInterestByCard() {
+      if (entries.length === 0) return;
+      const latest = entries[entries.length - 1];
+      const interest = calcInterest(latest, settings);
+      const aprs = settings.aprs;
+      const amexInt = (latest.amex || 0) * aprs.amex / 100 / 12;
+      const rhInt = (latest.rh || 0) * aprs.rh / 100 / 12;
+      const boaInt = (latest.boa || 0) * aprs.boa / 100 / 12;
+      const alaskaInt = (latest.alaska || 0) * aprs.alaska / 100 / 12;
+      const appleInt = (latest.apple || 0) * aprs.apple / 100 / 12;
+      $('intAmexDisplay').textContent = fmt(amexInt);
+      $('intRhDisplay').textContent = fmt(rhInt);
+      $('intBoaDisplay').textContent = fmt(boaInt);
+      $('intAlaskaDisplay').textContent = fmt(alaskaInt);
+      $('intAppleDisplay').textContent = fmt(appleInt);
+    }
+    function makeChartOptions(onHover) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: false,
+            external: onHover
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: '#2a2e3d' },
+            ticks: { color: '#8b8fa3', callback: v => '$' + Math.round(v).toLocaleString() }
+          },
+          x: {
+            grid: { color: '#2a2e3d' },
+            ticks: { color: '#8b8fa3', maxTicksLimit: 6 }
+          }
+        }
+      };
+    }
+    function renderNWChart() {
+      const filtered = getFilteredEntries(chartRanges.nw);
+      if (filtered.length < 2) return;
+      const dates = filtered.map(e => formatDate(e.date));
+      const nws = filtered.map(e => calcEntry(e, settings).nw);
+      const latest = nws[nws.length - 1];
+      $('nwChartValue').textContent = fmtNW(latest);
+      $('nwChartLabel').textContent = chartRanges.nw === 'ALL' ? 'All time' : `Last ${chartRanges.nw}`;
+      if (nwTrendChart) nwTrendChart.destroy();
+      const ctx = $('nwTrendChart').getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 180);
+      grad.addColorStop(0, 'rgba(52,211,153,0.3)');
+      grad.addColorStop(1, 'rgba(52,211,153,0)');
+      nwTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{ label: 'Net Worth', data: nws, borderColor: '#34d399', backgroundColor: grad,
+            tension: 0.4, fill: true, pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: '#34d399',
+            borderWidth: 2.5 }]
+        },
+        options: makeChartOptions(ctx => {
+          if (ctx.tooltip.dataPoints?.length) {
+            const dp = ctx.tooltip.dataPoints[0];
+            $('nwChartValue').textContent = fmtNW(dp.parsed.y);
+            $('nwChartLabel').textContent = dp.label;
+          }
+        })
+      });
+    }
+    function renderDebtChart() {
+      const filtered = getFilteredEntries(chartRanges.debt);
+      if (filtered.length < 2) return;
+      const dates = filtered.map(e => formatDate(e.date));
+      const debts = filtered.map(e => calcEntry(e, settings).totalDebt);
+      const latest = debts[debts.length - 1];
+      $('debtChartValue').textContent = fmt(latest);
+      $('debtChartLabel').textContent = chartRanges.debt === 'ALL' ? 'All time' : `Last ${chartRanges.debt}`;
+      if (debtTrendChart) debtTrendChart.destroy();
+      const ctx = $('debtTrendChart').getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 180);
+      grad.addColorStop(0, 'rgba(248,113,113,0.3)');
+      grad.addColorStop(1, 'rgba(248,113,113,0)');
+      debtTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{ label: 'Total Debt', data: debts, borderColor: '#f87171', backgroundColor: grad,
+            tension: 0.4, fill: true, pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: '#f87171',
+            borderWidth: 2.5 }]
+        },
+        options: makeChartOptions(ctx => {
+          if (ctx.tooltip.dataPoints?.length) {
+            const dp = ctx.tooltip.dataPoints[0];
+            $('debtChartValue').textContent = fmt(dp.parsed.y);
+            $('debtChartLabel').textContent = dp.label;
+          }
+        })
+      });
+    }
+    function renderStockPicker() {
+      const row = $('stockPickerRow');
+      if (!row) return;
+      let html = `<button class="stock-pick-btn ${activeStockView === 'total' ? 'active' : ''}" onclick="setStockView('total')">Total</button>`;
+      for (let s of settings.stocks) {
+        html += `<button class="stock-pick-btn ${activeStockView === s.ticker ? 'active' : ''}" onclick="setStockView('${s.ticker}')">${s.ticker}</button>`;
+      }
+      row.innerHTML = html;
+    }
+    function setStockView(view) {
+      activeStockView = view;
+      renderStockPicker();
+      renderStockChart();
+    }
+    function renderStockChart() {
+      const isTotal = activeStockView === 'total';
+      const filtered = getFilteredEntries(chartRanges.stock);
+      const rangeLabel = chartRanges.stock === 'ALL' ? 'All time' : `Last ${chartRanges.stock}`;
+      // Filter entries that have price data for the selected view
+      const entriesWithData = filtered.filter(e => {
+        if (!e.stockPrices) return false;
+        if (isTotal) return Object.keys(e.stockPrices).length > 0;
+        return e.stockPrices[activeStockView] != null;
+      });
+      // Clear chart if not enough data
+      if (entriesWithData.length < 2) {
+        if (stockTrendChart) { stockTrendChart.destroy(); stockTrendChart = null; }
+        $('stockChartValue').textContent = '—';
+        $('stockChartLabel').textContent = 'Not enough data yet';
+        $('stockStatsRow').style.display = 'none';
+        $('stockTxnLegend').innerHTML = '';
+        return;
+      }
+      const dates = entriesWithData.map(e => formatDate(e.date));
+      // Compute values per entry
+      const values = entriesWithData.map(e => {
+        if (isTotal) {
+          let total = 0;
+          for (let s of settings.stocks) {
+            const price = e.stockPrices?.[s.ticker] || 0;
+            const shares = e.stockShares?.[s.ticker] ?? s.shares;
+            total += price * shares;
+          }
+          return Math.round(total);
+        } else {
+          const price = e.stockPrices?.[activeStockView] || 0;
+          const stockCfg = settings.stocks.find(s => s.ticker === activeStockView);
+          const shares = e.stockShares?.[activeStockView] ?? (stockCfg?.shares || 0);
+          return Math.round(price * shares);
+        }
+      });
+      // Determine chart color based on overall direction
+      const first = values[0], last = values[values.length - 1];
+      const isUp = last >= first;
+      const lineColor = isUp ? '#34d399' : '#f87171';
+      const gradColor = isUp ? 'rgba(52,211,153,' : 'rgba(248,113,113,';
+      // Header value display
+      $('stockChartValue').textContent = fmt(last);
+      const change = last - first;
+      const changePct = first !== 0 ? ((change / first) * 100).toFixed(2) : '0.00';
+      const changeStr = `${change >= 0 ? '+' : ''}${fmt(change)} (${change >= 0 ? '+' : ''}${changePct}%) · ${rangeLabel}`;
+      $('stockChartLabel').textContent = changeStr;
+      $('stockChartLabel').style.color = isUp ? 'var(--green)' : 'var(--red)';
+      // Transaction markers for selected stock (or all if total)
+      const rangeStart = entriesWithData[0]?.date;
+      const relevantTxns = transactions.filter(t =>
+        (!rangeStart || t.date >= rangeStart) &&
+        (isTotal || t.ticker === activeStockView)
+      );
+      const buyDates = new Set(relevantTxns.filter(t => t.type === 'buy').map(t => formatDate(t.date)));
+      const sellDates = new Set(relevantTxns.filter(t => t.type === 'sell').map(t => formatDate(t.date)));
+      const pointColors = dates.map(d => buyDates.has(d) ? '#34d399' : sellDates.has(d) ? '#f87171' : 'transparent');
+      const pointRadii = dates.map(d => (buyDates.has(d) || sellDates.has(d)) ? 7 : 0);
+      const pointHoverRadii = dates.map(() => 5);
+      if (stockTrendChart) stockTrendChart.destroy();
+      const ctx = $('stockTrendChart').getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 200);
+      grad.addColorStop(0, gradColor + '0.35)');
+      grad.addColorStop(1, gradColor + '0)');
+      stockTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: isTotal ? 'Portfolio' : activeStockView,
+            data: values,
+            borderColor: lineColor,
+            backgroundColor: grad,
+            tension: 0.4, fill: true,
+            pointRadius: pointRadii,
+            pointHoverRadius: pointHoverRadii,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            borderWidth: 2.5
+          }]
+        },
+        options: makeChartOptions(tooltipCtx => {
+          if (tooltipCtx.tooltip.dataPoints?.length) {
+            const dp = tooltipCtx.tooltip.dataPoints[0];
+            $('stockChartValue').textContent = fmt(dp.parsed.y);
+            // Show change vs first point on hover
+            const hoverChange = dp.parsed.y - first;
+            const hoverPct = first !== 0 ? ((hoverChange / first) * 100).toFixed(2) : '0.00';
+            $('stockChartLabel').textContent = `${hoverChange >= 0 ? '+' : ''}${fmt(hoverChange)} (${hoverChange >= 0 ? '+' : ''}${hoverPct}%) · ${dp.label}`;
+            $('stockChartLabel').style.color = hoverChange >= 0 ? 'var(--green)' : 'var(--red)';
+          } else {
+            $('stockChartValue').textContent = fmt(last);
+            $('stockChartLabel').textContent = changeStr;
+            $('stockChartLabel').style.color = isUp ? 'var(--green)' : 'var(--red)';
+          }
+        })
+      });
+      // Legend
+      let legendHtml = '';
+      if (buyDates.size) legendHtml += `<span style="color:var(--green);">● Buy</span>`;
+      if (sellDates.size) legendHtml += `<span style="color:var(--red);">● Sell</span>`;
+      $('stockTxnLegend').innerHTML = legendHtml;
+      // Per-stock stats panel (hidden for total view)
+      const statsRow = $('stockStatsRow');
+      if (!isTotal) {
+        const stockCfg = settings.stocks.find(s => s.ticker === activeStockView);
+        const latestEntry = entriesWithData[entriesWithData.length - 1];
+        const currentPrice = latestEntry?.stockPrices?.[activeStockView] || 0;
+        const shares = stockCfg?.shares || 0;
+        const costBasis = stockCfg?.costBasis || 0;
+        const totalCost = shares * costBasis;
+        const totalValue = shares * currentPrice;
+        const totalGain = totalValue - totalCost;
+        const gainPct = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0.0';
+        const gainColor = totalGain >= 0 ? 'var(--green)' : 'var(--red)';
+        statsRow.style.display = 'grid';
+        statsRow.innerHTML = `
+          <div class="stock-stat">
+            <div class="stock-stat-label">Shares</div>
+            <div class="stock-stat-val">${shares.toLocaleString()}</div>
+          </div>
+          <div class="stock-stat">
+            <div class="stock-stat-label">Price</div>
+            <div class="stock-stat-val">$${currentPrice.toFixed(2)}</div>
+          </div>
+          <div class="stock-stat">
+            <div class="stock-stat-label">Avg Cost</div>
+            <div class="stock-stat-val">$${costBasis.toFixed(2)}</div>
+          </div>
+          <div class="stock-stat">
+            <div class="stock-stat-label">Market Value</div>
+            <div class="stock-stat-val">${fmt(totalValue)}</div>
+          </div>
+          <div class="stock-stat">
+            <div class="stock-stat-label">Total Gain</div>
+            <div class="stock-stat-val" style="color:${gainColor};">${totalGain >= 0 ? '+' : ''}${fmt(totalGain)}</div>
+          </div>
+          <div class="stock-stat">
+            <div class="stock-stat-label">Return</div>
+            <div class="stock-stat-val" style="color:${gainColor};">${totalGain >= 0 ? '+' : ''}${gainPct}%</div>
+          </div>`;
+      } else {
+        statsRow.style.display = 'none';
+      }
+    }
+    function renderCharts() {
+      renderNWChart();
+      renderDebtChart();
+      renderStockChart();
+    }
+    function renderPayoffProjections() {
+      if (entries.length === 0) return;
+      const latest = entries[entries.length - 1];
+      const aprs = settings.aprs;
+      const monthlyLeftover = settings.income - totalBills(settings) - calcInterest(latest, settings);
+      if (monthlyLeftover <= 0) {
+        $('payoffCard').style.display = 'none';
+        if ($('payoffEmpty')) $('payoffEmpty').style.display = 'block';
+        return;
+      }
+      if ($('payoffEmpty')) $('payoffEmpty').style.display = 'none';
+      const debtCards = [
+        {name:'Amex Platinum', balance:latest.amex || 0, apr:aprs.amex},
+        {name:'Robinhood', balance:latest.rh || 0, apr:aprs.rh},
+        {name:'BofA APR', balance:latest.boa || 0, apr:aprs.boa},
+        {name:'Alaska Air', balance:latest.alaska || 0, apr:aprs.alaska},
+        {name:'Apple Card', balance:latest.apple || 0, apr:aprs.apple}
+      ];
+      const balances = JSON.parse(JSON.stringify(debtCards));
+      let months = 0;
+      const monthsPerCard = {};
+      while (months < 360) {
+        const activeCards = balances.filter(c => c.balance > 0);
+        if (activeCards.length === 0) break;
+        for (let card of activeCards) {
+          card.balance += card.balance * card.apr / 100 / 12;
+        }
+        let targetCard;
+        if (payoffStrategy === 'avalanche') {
+          targetCard = activeCards.reduce((a, b) => (a.apr > b.apr) ? a : b);
+        } else {
+          targetCard = activeCards.reduce((a, b) => (a.balance < b.balance) ? a : b);
+        }
+        targetCard.balance = Math.max(0, targetCard.balance - monthlyLeftover);
+        if (!monthsPerCard[targetCard.name]) monthsPerCard[targetCard.name] = 0;
+        if (monthsPerCard[targetCard.name] === 0 && targetCard.balance <= 0) {
+          monthsPerCard[targetCard.name] = months + 1;
+        }
+        months++;
+      }
+      const totalMonths = months === 360 ? null : months;
+      const debtFreeDate = totalMonths ? new Date(new Date(latest.date).getTime() + totalMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : 'Never (>30y)';
+      let html = '';
+      for (let card of debtCards) {
+        if (card.balance <= 0) continue;
+        const projMonths = totalMonths || 360;
+        const payoffDate = new Date(new Date(latest.date).getTime() + projMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        html += `<div class="stat-row"><span class="stat-label">${card.name}</span><span style="text-align:right; font-size:13px;"><div>${fmt(card.balance)}</div><div style="color:var(--dim); font-size:12px;">~${projMonths} months</div></span></div>`;
+      }
+      html += `<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-weight:700; color:var(--green);">Debt Free By: ${debtFreeDate}</div>`;
+      $('payoffCard').style.display = 'block';
+      $('payoffContent').innerHTML = html;
+      const toggleBtns = $('payoffToggle').querySelectorAll('button');
+      toggleBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.strategy === payoffStrategy);
+        btn.addEventListener('click', () => {
+          payoffStrategy = btn.dataset.strategy;
+          renderPayoffProjections();
+        });
+      });
+    }
+    function renderPromoAlerts() {
+      const promos = settings.promos || {};
+      const hasPromos = (promos.boa && promos.boa.length > 0) || (promos.citi && promos.citi.length > 0);
+      if (!hasPromos) {
+        $('promoCard').style.display = 'none';
+        return;
+      }
+      $('promoCard').style.display = 'block';
+      if (entries.length === 0) return;
+      const latest = entries[entries.length - 1];
+      let html = '';
+      const promoList = [
+        {name:'BofA 0%', date:promos.boa, balance:latest.boa0 || 0},
+        {name:'Citi 0%', date:promos.citi, balance:latest.citi0 || 0}
+      ];
+      for (let promo of promoList) {
+        if (!promo.date) continue;
+        const expireDate = new Date(promo.date);
+        const today = new Date();
+        const daysLeft = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+        const isExpired = daysLeft < 0;
+        let color = 'var(--green)';
+        if (isExpired) color = 'var(--red)';
+        else if (daysLeft < 90) color = 'var(--gold)';
+        const progressPct = isExpired ? 100 : (90 - Math.min(daysLeft, 90)) / 90 * 100;
+        html += `<div style="margin-bottom:12px;">
+          <div class="stat-row">
+            <span class="stat-label">${promo.name}</span>
+            <span style="text-align:right; font-size:13px;"><div>${fmt(promo.balance)}</div><div style="color:${color}; font-size:12px;">${isExpired ? 'EXPIRED' : daysLeft + ' days'}</div></span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${progressPct}%; background:${color};"></div></div>
+        </div>`;
+      }
+      $('promoContent').innerHTML = html;
+    }
+    function renderMilestones() {
+      if (entries.length === 0) return;
+      const first = entries[0];
+      const latest = entries[entries.length - 1];
+      const {nw: firstNW, totalDebt: firstDebt} = calcEntry(first, settings);
+      const {nw: latestNW, totalDebt: latestDebt} = calcEntry(latest, settings);
+      const nwPct = Math.max(0, Math.min(100, (latestNW - firstNW) / (0 - firstNW) * 100));
+      const debtPct = Math.max(0, Math.min(100, (firstDebt - latestDebt) / firstDebt * 100));
+      let html = '';
+      html += `<div style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span class="stat-label">Break Even ($0 NW)</span>
+          <span style="font-size:13px; font-weight:600;">${nwPct.toFixed(0)}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${nwPct}%;"></div></div>
+      </div>`;
+      html += `<div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span class="stat-label">Debt Free ($0 Debt)</span>
+          <span style="font-size:13px; font-weight:600;">${debtPct.toFixed(0)}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${debtPct}%;"></div></div>
+      </div>`;
+      $('milestonesCard').style.display = 'block';
+      $('milestonesContent').innerHTML = html;
+    }
+    function renderEntryForm() {
+      const today = new Date().toISOString().split('T')[0];
+      $('entryDate').value = today;
+      if (editingIndex >= 0) {
+        const entry = entries[editingIndex];
+        $('entryTitle').textContent = 'Edit Entry';
+        $('entryDate').value = entry.date;
+        $('entryAmex').value = entry.amex || '';
+        $('entryRh').value = entry.rh || '';
+        $('entryBoa').value = entry.boa || '';
+        $('entryAlaska').value = entry.alaska || '';
+        $('entryApple').value = entry.apple || '';
+        $('entryBoa0').value = entry.boa0 || '';
+        $('entryCiti0').value = entry.citi0 || '';
+        $('entryWork').value = entry.work || '';
+        $('entryPersonal').value = entry.personal || '';
+        $('entryCash').value = entry.cash || '';
+        $('entryBank').value = entry.bank || '';
+        $('entryEarned').value = entry.earned || '';
+        $('entrySpent').value = entry.spent || '';
+        $('entryNotes').value = entry.notes || '';
+        for (let ticker in entry.stockPrices || {}) {
+          const input = document.querySelector(`input[data-ticker="${ticker}"]`);
+          if (input) input.value = entry.stockPrices[ticker];
+        }
+        $('save-btn').textContent = 'Update Entry';
+        $('cancel-edit-btn').style.display = 'block';
+      } else {
+        $('entryTitle').textContent = 'New Entry';
+        $('save-btn').textContent = 'Save Entry';
+        $('cancel-edit-btn').style.display = 'none';
+      }
+      renderEntryPortfolio();
+      renderStockPricesForm();
+      renderEntryTxnTicker();
+      // Reset transaction fields
+      entryTxnType = 'buy';
+      if ($('entry-txn-buy-btn')) $('entry-txn-buy-btn').classList.add('active');
+      if ($('entry-txn-sell-btn')) $('entry-txn-sell-btn').classList.remove('active');
+      if ($('entryTxnShares')) $('entryTxnShares').value = '';
+      if ($('entryTxnPrice')) $('entryTxnPrice').value = '';
+      if ($('entryTxnNotes')) $('entryTxnNotes').value = '';
+      if ($('entryTxnSummary')) $('entryTxnSummary').textContent = '';
+    }
+    function renderStockPricesForm() {
+      if (!$('stockPricesContent')) return;
+      if (settings.stocks.length === 0) {
+        $('stockPricesSection').style.display = 'none';
+        $('stockPricesContent').innerHTML = '';
+        return;
+      }
+      $('stockPricesSection').style.display = 'block';
+      let html = '';
+      for (let s of settings.stocks) {
+        html += `<div class="input-group">
+          <label>${s.name} (${s.ticker})</label>
+          <input type="number" step="0.01" data-ticker="${s.ticker}" placeholder="Price">
+        </div>`;
+      }
+      $('stockPricesContent').innerHTML = html;
+    }
+    let entryTxnType = 'buy';
+    function setEntryTxnType(type) {
+      entryTxnType = type;
+      $('entry-txn-buy-btn').classList.toggle('active', type === 'buy');
+      $('entry-txn-sell-btn').classList.toggle('active', type === 'sell');
+    }
+    function renderEntryPortfolio() {
+      const el = $('entryStocksContent');
+      if (!el) return;
+      if (settings.stocks.length === 0) {
+        el.innerHTML = `<div style="color:var(--dim); font-size:13px; padding:8px 0; text-align:center;">No stocks yet. Search below to add one.</div>`;
+        return;
+      }
+      let html = '';
+      for (let i = 0; i < settings.stocks.length; i++) {
+        const s = settings.stocks[i];
+        const livePrice = document.querySelector(`input[data-ticker="${s.ticker}"]`)?.value;
+        const priceDisplay = livePrice ? `<span style="color:var(--green); font-size:12px; font-weight:600;">$${parseFloat(livePrice).toFixed(2)}</span>` : `<span style="font-size:12px; color:var(--dim);">fetching…</span>`;
+        html += `<div style="display:flex; align-items:center; justify-content:space-between; background:var(--card2); border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+          <div>
+            <span style="font-weight:700; font-size:15px;">${s.ticker}</span>
+            <span style="color:var(--dim); font-size:12px; margin-left:6px;">${s.name}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="text-align:right;">
+              <div style="font-size:13px; font-weight:600;">${s.shares.toLocaleString()} shares</div>
+              <div>${priceDisplay}</div>
+            </div>
+            <button onclick="removeStockFromEntry(${i})" style="background:none; border:none; color:var(--red); font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">×</button>
+          </div>
+        </div>`;
+      }
+      el.innerHTML = html;
+      renderEntryTxnTicker();
+    }
+    function renderEntryTxnTicker() {
+      const sel = $('entryTxnTicker');
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = settings.stocks.length === 0
+        ? '<option value="">— add a stock first —</option>'
+        : settings.stocks.map(s => `<option value="${s.ticker}">${s.ticker} — ${s.shares} shares</option>`).join('');
+      if (prev && settings.stocks.find(s => s.ticker === prev)) sel.value = prev;
+    }
+    function removeStockFromEntry(idx) {
+      if (!confirm(`Remove ${settings.stocks[idx].ticker} from portfolio?`)) return;
+      settings.stocks.splice(idx, 1);
+      save();
+      renderEntryPortfolio();
+      renderStockPricesForm();
+      renderEntryTxnTicker();
+    }
+    function searchEntryStocks(query) {
+      const resultsDiv = $('entry-stock-results');
+      if (!resultsDiv) return;
+      if (!query || query.length < 1) { resultsDiv.classList.remove('open'); return; }
+      const results = STOCK_TICKERS.filter(t => t.startsWith(query.toUpperCase())).slice(0, 6);
+      resultsDiv.innerHTML = '';
+      for (let ticker of results) {
+        const alreadyAdded = settings.stocks.find(s => s.ticker === ticker);
+        const div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.innerHTML = `<div class="stock-ticker">${ticker}</div>${alreadyAdded ? '<span style="font-size:11px;color:var(--dim);">Added</span>' : ''}`;
+        if (!alreadyAdded) div.addEventListener('click', () => addStockFromEntrySearch(ticker));
+        resultsDiv.appendChild(div);
+      }
+      resultsDiv.classList.add('open');
+    }
+    function addStockFromEntrySearch(ticker) {
+      if (settings.stocks.find(s => s.ticker === ticker)) {
+        showToast('Already in portfolio');
+        return;
+      }
+      settings.stocks.push({ ticker, name: ticker, shares: 0, costBasis: 0, taxRate: 20 });
+      save();
+      $('entry-stock-search').value = '';
+      $('entry-stock-results').classList.remove('open');
+      renderEntryPortfolio();
+      renderStockPricesForm();
+      renderEntryTxnTicker();
+      // Also sync with settings stock search
+      renderSettings();
+      autoFillStockPrices();
+    }
+    function updateEntryTxnSummary() {
+      const shares = parseFloat($('entryTxnShares')?.value) || 0;
+      const price = parseFloat($('entryTxnPrice')?.value) || 0;
+      const el = $('entryTxnSummary');
+      if (!el) return;
+      if (shares > 0 && price > 0) {
+        const total = shares * price;
+        el.textContent = `${entryTxnType === 'buy' ? 'Buying' : 'Selling'} ${shares} shares @ $${price.toFixed(2)} = ${fmt(total)}`;
+        el.style.color = entryTxnType === 'buy' ? 'var(--green)' : 'var(--red)';
+      } else {
+        el.textContent = '';
+      }
+    }
+    async function autoFillStockPrices() {
+      for (let s of settings.stocks) {
+        const input = document.querySelector(`input[data-ticker="${s.ticker}"]`);
+        if (input && !input.value) {
+          if (entries.length > 0) {
+            const latest = entries[entries.length - 1];
+            const lastPrice = latest.stockPrices?.[s.ticker];
+            if (lastPrice) {
+              input.value = lastPrice.toFixed(2);
+            }
+          }
+        }
+      }
+      // Refresh portfolio section to show live prices
+      renderEntryPortfolio();
+    }
+    function saveEntry() {
+      const date = $('entryDate').value;
+      const amex = parseFloat($('entryAmex').value) || 0;
+      const rh = parseFloat($('entryRh').value) || 0;
+      const boa = parseFloat($('entryBoa').value) || 0;
+      const alaska = parseFloat($('entryAlaska').value) || 0;
+      const apple = parseFloat($('entryApple').value) || 0;
+      const boa0 = parseFloat($('entryBoa0').value) || 0;
+      const citi0 = parseFloat($('entryCiti0').value) || 0;
+      const work = parseFloat($('entryWork').value) || 0;
+      const personal = parseFloat($('entryPersonal').value) || 0;
+      const cash = parseFloat($('entryCash').value) || 0;
+      const bank = parseFloat($('entryBank').value) || 0;
+      const earned = parseFloat($('entryEarned').value) || 0;
+      const spent = parseFloat($('entrySpent').value) || 0;
+      const notes = $('entryNotes').value;
+      const stockPrices = {};
+      const stockShares = {};
+      for (let s of settings.stocks) {
+        const input = document.querySelector(`input[data-ticker="${s.ticker}"]`);
+        if (input && input.value) {
+          stockPrices[s.ticker] = parseFloat(input.value);
+        }
+        stockShares[s.ticker] = s.shares;
+      }
+      const entry = {date, amex, rh, boa, alaska, apple, boa0, citi0, stockPrices, stockShares, work, personal, cash, bank, earned, spent, notes};
+      if (editingIndex >= 0) {
+        entries[editingIndex] = entry;
+        editingIndex = -1;
+      } else {
+        entries.push(entry);
+      }
+      // Handle inline stock transaction if filled
+      const txnTicker = $('entryTxnTicker')?.value;
+      const txnShares = parseFloat($('entryTxnShares')?.value) || 0;
+      const txnPrice = parseFloat($('entryTxnPrice')?.value) || 0;
+      if (txnTicker && txnShares > 0 && txnPrice > 0) {
+        const stock = settings.stocks.find(s => s.ticker === txnTicker);
+        if (stock) {
+          if (entryTxnType === 'buy') {
+            stock.shares = Math.round((stock.shares + txnShares) * 1000) / 1000;
+          } else {
+            if (txnShares > stock.shares) {
+              showToast('Cannot sell more shares than you own — transaction skipped');
+            } else {
+              stock.shares = Math.round((stock.shares - txnShares) * 1000) / 1000;
+              // Remove stock from portfolio if shares hit 0
+              if (stock.shares === 0 && confirm(`You now have 0 shares of ${txnTicker}. Remove it from your portfolio?`)) {
+                const idx = settings.stocks.indexOf(stock);
+                settings.stocks.splice(idx, 1);
+              }
+            }
+          }
+          transactions.push({
+            date, ticker: txnTicker, type: entryTxnType,
+            shares: txnShares, pricePerShare: txnPrice,
+            total: Math.round(txnShares * txnPrice * 100) / 100,
+            notes: $('entryTxnNotes')?.value?.trim() || ''
+          });
+          transactions.sort((a, b) => b.date.localeCompare(a.date));
+        }
+      }
+      save();
+      showToast('Entry saved!');
+      showTab('dashboard');
+      renderDashboard();
+    }
+    function editEntry(idx) {
+      editingIndex = idx;
+      showTab('entry');
+      renderEntryForm();
+    }
+    function deleteEntry(idx) {
+      if (idx === 0) {
+        showToast('Cannot delete first entry');
+        return;
+      }
+      if (confirm('Delete this entry?')) {
+        entries.splice(idx, 1);
+        save();
+        showToast('Entry deleted');
+        renderHistory();
+        renderDashboard();
+      }
+    }
+    function prefillLast() {
+      if (entries.length === 0) return;
+      editingIndex = -1;
+      const latest = entries[entries.length - 1];
+      $('entryDate').value = new Date().toISOString().split('T')[0];
+      $('entryAmex').value = latest.amex || '';
+      $('entryRh').value = latest.rh || '';
+      $('entryBoa').value = latest.boa || '';
+      $('entryAlaska').value = latest.alaska || '';
+      $('entryApple').value = latest.apple || '';
+      $('entryBoa0').value = latest.boa0 || '';
+      $('entryCiti0').value = latest.citi0 || '';
+      $('entryWork').value = latest.work || '';
+      $('entryPersonal').value = latest.personal || '';
+      $('entryCash').value = latest.cash || '';
+      $('entryBank').value = latest.bank || '';
+      $('entryEarned').value = '';
+      $('entrySpent').value = '';
+      $('entryNotes').value = '';
+      for (let ticker in latest.stockPrices || {}) {
+        const input = document.querySelector(`input[data-ticker="${ticker}"]`);
+        if (input) input.value = latest.stockPrices[ticker];
+      }
+      renderEntryForm();
+    }
+    function renderHistory() {
+      if (entries.length === 0) return;
+      $('logSubtitle').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+      let html = '';
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+        const {totalDebt, totalAssets, nw} = calcEntry(entry, settings);
+        let borderColor = 'var(--border)';
+        if (i === 0) {
+          borderColor = 'var(--blue)';
+        } else {
+          const prevNW = calcEntry(entries[i - 1], settings).nw;
+          borderColor = nw >= prevNW ? 'var(--green)' : 'var(--red)';
+        }
+        html += `<div class="log-entry" style="border-left-color: ${borderColor};">
+          <div class="log-date">${formatDate(entry.date)}</div>
+          <div class="log-grid">
+            <div class="log-item"><span class="k">Amex</span><span>${fmt(entry.amex || 0)}</span></div>
+            <div class="log-item"><span class="k">Robinhood</span><span>${fmt(entry.rh || 0)}</span></div>
+            <div class="log-item"><span class="k">BofA APR</span><span>${fmt(entry.boa || 0)}</span></div>
+            <div class="log-item"><span class="k">Alaska</span><span>${fmt(entry.alaska || 0)}</span></div>
+            <div class="log-item"><span class="k">Apple</span><span>${fmt(entry.apple || 0)}</span></div>
+            <div class="log-item"><span class="k">BofA 0%</span><span>${fmt(entry.boa0 || 0)}</span></div>
+            <div class="log-item"><span class="k">Citi 0%</span><span>${fmt(entry.citi0 || 0)}</span></div>
+            <div class="log-item"><span class="k">Work Tab</span><span>${fmt(entry.work || 0)}</span></div>
+            <div class="log-item"><span class="k">Personal</span><span>${fmt(entry.personal || 0)}</span></div>
+            <div class="log-item"><span class="k">Cash</span><span>${fmt(entry.cash || 0)}</span></div>
+            <div class="log-item"><span class="k">Bank</span><span>${fmt(entry.bank || 0)}</span></div>`;
+        if (settings.stocks.length > 0) {
+          for (let s of settings.stocks) {
+            const price = entry.stockPrices?.[s.ticker];
+            if (price) {
+              const shares = entry.stockShares?.[s.ticker] ?? s.shares;
+              const total = shares * price;
+              html += `<div class="log-item" style="grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; background:var(--card2); border-radius:8px; padding:6px 8px; margin-top:4px;">
+                <span class="k" style="font-weight:700;">${s.ticker}</span>
+                <span style="font-size:12px; color:var(--dim);">$${price.toFixed(2)}/share &nbsp;·&nbsp; ${shares} shares</span>
+                <span style="font-weight:700; color:var(--green);">${fmt(total)}</span>
+              </div>`;
+            }
+          }
+        }
+        html += `</div>`;
+        html += `<div class="log-summary">
+          <span>Debt: ${fmt(totalDebt)}</span>
+          <span>Assets: ${fmt(totalAssets)}</span>
+          <span>NW: ${fmtNW(nw)}</span>
+        </div>`;
+        if (entry.earned || entry.spent) {
+          html += `<div style="font-size:12px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            <span style="color:var(--green);">+${fmt(entry.earned || 0)}</span>
+            <span style="margin-left:12px; color:var(--red);">-${fmt(entry.spent || 0)}</span>
+          </div>`;
+        }
+        if (entry.notes) {
+          html += `<div style="font-size:12px; margin-top:6px; color:var(--dim); font-style:italic;">Note: ${entry.notes}</div>`;
+        }
+        html += `<div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-secondary" style="flex:1; padding:8px; font-size:13px;" onclick="editEntry(${i})">Edit</button>
+          <button class="btn btn-secondary" style="flex:1; padding:8px; font-size:13px; color:var(--red);" onclick="deleteEntry(${i})">Delete</button>
+        </div></div>`;
+      }
+      $('logContent').innerHTML = html;
+    }
+    function renderMonthly() {
+      if (entries.length === 0) return;
+      const byMonth = {};
+      for (let entry of entries) {
+        const dateStr = entry.date;
+        const monthKey = dateStr.substring(0, 7);
+        if (!byMonth[monthKey]) byMonth[monthKey] = [];
+        byMonth[monthKey].push(entry);
+      }
+      let html = '';
+      const months = Object.keys(byMonth).sort().reverse();
+      for (let monthKey of months) {
+        const monthEntries = byMonth[monthKey];
+        const [year, month] = monthKey.split('-');
+        const monthName = new Date(year, parseInt(month) - 1).toLocaleDateString('en-US', {month:'long', year:'numeric'});
+        let totalNW = 0;
+        let totalEarned = 0;
+        let totalSpent = 0;
+        for (let entry of monthEntries) {
+          const {nw} = calcEntry(entry, settings);
+          totalNW += nw;
+          totalEarned += entry.earned || 0;
+          totalSpent += entry.spent || 0;
+        }
+        const avgNW = Math.round(totalNW / monthEntries.length);
+        const netCF = totalEarned - totalSpent;
+        html += `<div class="monthly-row">
+          <div class="monthly-month">${monthName} (${monthEntries.length})</div>
+          <div class="monthly-vals">
+            <div style="font-size:12px; color:var(--dim); margin-bottom:2px;">Avg NW: ${fmtNW(avgNW)}</div>
+            <div class="earned">+${fmt(totalEarned)}</div>
+            <div class="spent">-${fmt(totalSpent)}</div>
+            <div class="net">${fmtSigned(netCF)}</div>
+          </div>
+        </div>`;
+      }
+      $('monthlyContent').innerHTML = `<div class="card">${html}</div>`;
+    }
+    function renderSettings() {
+      $('settingsIncome').value = settings.income;
+      let billsHtml = '';
+      for (let i = 0; i < settings.bills.length; i++) {
+        const b = settings.bills[i];
+        billsHtml += `<div class="bill-row">
+          <input class="bill-name" contenteditable="true" value="${b.name}" onblur="updateBillName(${i}, this.innerText)">
+          <input type="number" class="bill-amount" value="${b.amount}" onchange="updateBillAmount(${i}, this.value)">
+          <button class="bill-remove" onclick="removeBill(${i})">×</button>
+        </div>`;
+      }
+      $('billsContent').innerHTML = billsHtml;
+      let stocksHtml = '';
+      for (let i = 0; i < settings.stocks.length; i++) {
+        const s = settings.stocks[i];
+        stocksHtml += `<div class="stock-card">
+          <div class="stock-header">
+            <div><div class="stock-ticker">${s.ticker}</div><div style="font-size:12px; color:var(--dim);">${s.name}</div></div>
+            <button class="stock-remove" onclick="removeStock(${i})">×</button>
+          </div>
+          <div class="stock-details">
+            <div><span class="sd-label">Shares</span><input type="number" value="${s.shares}" style="width:60px; padding:4px; background:var(--card2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; text-align:right;" onchange="updateStock(${i}, 'shares', this.value)"></div>
+            <div><span class="sd-label">Cost Basis</span><input type="number" step="0.01" value="${s.costBasis}" style="width:60px; padding:4px; background:var(--card2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; text-align:right;" onchange="updateStock(${i}, 'costBasis', this.value)"></div>
+            <div><span class="sd-label">Tax Rate %</span><input type="number" value="${s.taxRate}" style="width:60px; padding:4px; background:var(--card2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; text-align:right;" onchange="updateStock(${i}, 'taxRate', this.value)"></div>
+          </div>
+        </div>`;
+      }
+      $('stocksContent').innerHTML = stocksHtml;
+      $('aprAmex').value = settings.aprs.amex;
+      $('aprRh').value = settings.aprs.rh;
+      $('aprBoa').value = settings.aprs.boa;
+      $('aprAlaska').value = settings.aprs.alaska;
+      $('aprApple').value = settings.aprs.apple;
+      $('promoBoa').value = settings.promos.boa || '';
+      $('promoCiti').value = settings.promos.citi || '';
+      updatePINStatus();
+      const toggle = $('autoLockToggle');
+      toggle.classList.toggle('on', settings.autoLock);
+    }
+    function updateSettingsFromUI() {
+      settings.income = parseFloat($('settingsIncome').value) || 0;
+      settings.aprs.amex = parseFloat($('aprAmex').value) || 0;
+      settings.aprs.rh = parseFloat($('aprRh').value) || 0;
+      settings.aprs.boa = parseFloat($('aprBoa').value) || 0;
+      settings.aprs.alaska = parseFloat($('aprAlaska').value) || 0;
+      settings.aprs.apple = parseFloat($('aprApple').value) || 0;
+      settings.promos.boa = $('promoBoa').value || '';
+      settings.promos.citi = $('promoCiti').value || '';
+      save();
+    }
+    function updateBillName(idx, newName) {
+      settings.bills[idx].name = newName;
+      save();
+    }
+    function updateBillAmount(idx, newAmount) {
+      settings.bills[idx].amount = parseFloat(newAmount) || 0;
+      save();
+    }
+    function removeBill(idx) {
+      settings.bills.splice(idx, 1);
+      save();
+      renderSettings();
+    }
+    function addBill() {
+      settings.bills.push({name:'New Bill', amount:0});
+      save();
+      renderSettings();
+    }
+    function updateStock(idx, field, value) {
+      if (field === 'shares') settings.stocks[idx].shares = parseFloat(value) || 0;
+      else if (field === 'costBasis') settings.stocks[idx].costBasis = parseFloat(value) || 0;
+      else if (field === 'taxRate') settings.stocks[idx].taxRate = parseFloat(value) || 0;
+      save();
+    }
+    function removeStock(idx) {
+      settings.stocks.splice(idx, 1);
+      save();
+      renderSettings();
+    }
+    function updatePINStatus() {
+      const status = $('pinStatus');
+      const setBtn = $('set-pin-btn');
+      const changeBtn = $('change-pin-btn');
+      const removeBtn = $('remove-pin-btn');
+      if (pinHash) {
+        status.textContent = 'Set';
+        setBtn.style.display = 'none';
+        changeBtn.style.display = 'block';
+        removeBtn.style.display = 'block';
+      } else {
+        status.textContent = 'Not set';
+        setBtn.style.display = 'block';
+        changeBtn.style.display = 'none';
+        removeBtn.style.display = 'none';
+      }
+    }
+    function initPINPad() {
+      const pinPad = $('pinPad');
+      pinPad.innerHTML = '';
+      for (let i = 1; i <= 9; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'pin-key';
+        btn.textContent = i;
+        btn.addEventListener('click', () => addPINDigit(i.toString()));
+        pinPad.appendChild(btn);
+      }
+      const delBtn = document.createElement('button');
+      delBtn.className = 'pin-key fn';
+      delBtn.textContent = 'Back';
+      delBtn.addEventListener('click', removePINDigit);
+      pinPad.appendChild(delBtn);
+      const zeroBtn = document.createElement('button');
+      zeroBtn.className = 'pin-key';
+      zeroBtn.textContent = '0';
+      zeroBtn.addEventListener('click', () => addPINDigit('0'));
+      pinPad.appendChild(zeroBtn);
+      const okBtn = document.createElement('button');
+      okBtn.className = 'pin-key fn';
+      okBtn.textContent = 'OK';
+      okBtn.addEventListener('click', submitPIN);
+      pinPad.appendChild(okBtn);
+      initPINDots();
+    }
+    function initPINDots() {
+      const dots = $('pinDots');
+      dots.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'pin-dot';
+        dots.appendChild(dot);
+      }
+    }
+    let currentPIN = '';
+    let tempPINHash = null;
+    // pinMode: 'unlock', 'setup', 'confirm', 'verify-old', 'setup-new', 'confirm-new'
+    let pinMode = 'unlock';
+    function addPINDigit(digit) {
+      if (currentPIN.length < 4) {
+        currentPIN += digit;
+        updatePINDots();
+        if (currentPIN.length === 4) {
+          setTimeout(submitPIN, 200);
+        }
+      }
+    }
+    function removePINDigit() {
+      currentPIN = currentPIN.slice(0, -1);
+      updatePINDots();
+      $('lockErrorMsg').textContent = '';
+    }
+    function updatePINDots() {
+      const dots = document.querySelectorAll('.pin-dot');
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('filled', i < currentPIN.length);
+        dot.classList.remove('error');
+      });
+    }
+    function showPinError(msg) {
+      const dots = document.querySelectorAll('.pin-dot');
+      dots.forEach(d => d.classList.add('error'));
+      const dotContainer = $('pinDots');
+      dotContainer.classList.add('shake');
+      $('lockErrorMsg').textContent = msg;
+      currentPIN = '';
+      setTimeout(() => {
+        dotContainer.classList.remove('shake');
+        updatePINDots();
+      }, 400);
+      setTimeout(() => { $('lockErrorMsg').textContent = ''; }, 2000);
+    }
+    async function submitPIN() {
+      const hash = await hashPIN(currentPIN);
+      if (pinMode === 'unlock') {
+        // Verifying existing PIN to unlock
+        if (hash === pinHash) {
+          pinLocked = false;
+          currentPIN = '';
+          closeLockScreen();
+          resetAutoLockTimer();
+        } else {
+          showPinError('Wrong PIN');
+        }
+      } else if (pinMode === 'setup') {
+        // First entry of new PIN
+        tempPINHash = hash;
+        currentPIN = '';
+        pinMode = 'confirm';
+        document.querySelector('.lock-title').textContent = 'Confirm PIN';
+        document.querySelector('.lock-sub').textContent = 'Enter the same PIN again';
+        updatePINDots();
+      } else if (pinMode === 'confirm') {
+        // Confirming new PIN
+        if (hash === tempPINHash) {
+          pinHash = tempPINHash;
+          localStorage.setItem('pf_pin', pinHash);
+          tempPINHash = null;
+          currentPIN = '';
+          pinMode = 'unlock';
+          pinSetup = false;
+          showToast('PIN set!');
+          updatePINStatus();
+          closeLockScreen();
+        } else {
+          showPinError("PINs don't match — try again");
+          tempPINHash = null;
+          setTimeout(() => {
+            pinMode = 'setup';
+            document.querySelector('.lock-title').textContent = 'Create PIN';
+            document.querySelector('.lock-sub').textContent = 'Enter a 4-digit PIN';
+          }, 500);
+        }
+      } else if (pinMode === 'verify-old') {
+        // Verify current PIN before allowing change
+        if (hash === pinHash) {
+          currentPIN = '';
+          pinMode = 'setup-new';
+          document.querySelector('.lock-title').textContent = 'New PIN';
+          document.querySelector('.lock-sub').textContent = 'Enter your new 4-digit PIN';
+          updatePINDots();
+        } else {
+          showPinError('Wrong current PIN');
+        }
+      } else if (pinMode === 'setup-new') {
+        // First entry of new replacement PIN
+        tempPINHash = hash;
+        currentPIN = '';
+        pinMode = 'confirm-new';
+        document.querySelector('.lock-title').textContent = 'Confirm New PIN';
+        document.querySelector('.lock-sub').textContent = 'Enter the new PIN again';
+        updatePINDots();
+      } else if (pinMode === 'confirm-new') {
+        // Confirming new replacement PIN
+        if (hash === tempPINHash) {
+          pinHash = tempPINHash;
+          localStorage.setItem('pf_pin', pinHash);
+          tempPINHash = null;
+          currentPIN = '';
+          pinMode = 'unlock';
+          pinSetup = false;
+          showToast('PIN changed!');
+          updatePINStatus();
+          closeLockScreen();
+        } else {
+          showPinError("PINs don't match — try again");
+          tempPINHash = null;
+          setTimeout(() => {
+            pinMode = 'setup-new';
+            document.querySelector('.lock-title').textContent = 'New PIN';
+            document.querySelector('.lock-sub').textContent = 'Enter your new 4-digit PIN';
+          }, 500);
+        }
+      }
+    }
+    function closeLockScreen() {
+      $('lock-screen').classList.add('hidden');
+    }
+    function showLockScreen() {
+      $('lock-screen').classList.remove('hidden');
+      $('lockErrorMsg').textContent = '';
+      currentPIN = '';
+      initPINPad();
+      updatePINDots();
+    }
+    function resetAutoLockTimer() {
+      if (!settings.autoLock || !pinHash) return;
+      lastActivityTime = Date.now();
+      clearTimeout(autoLockTimer);
+      autoLockTimer = setTimeout(() => {
+        if (!pinLocked) {
+          pinLocked = true;
+          pinMode = 'unlock';
+          document.querySelector('.lock-title').textContent = 'Enter PIN';
+          document.querySelector('.lock-sub').textContent = '4-digit PIN required';
+          showLockScreen();
+        }
+      }, 5 * 60 * 1000);
+    }
+    function setPIN() {
+      pinSetup = true;
+      tempPINHash = null;
+      currentPIN = '';
+      pinMode = 'setup';
+      document.querySelector('.lock-title').textContent = 'Create PIN';
+      document.querySelector('.lock-sub').textContent = 'Enter a 4-digit PIN';
+      showLockScreen();
+    }
+    function changePIN() {
+      pinSetup = true;
+      tempPINHash = null;
+      currentPIN = '';
+      pinMode = 'verify-old';
+      document.querySelector('.lock-title').textContent = 'Current PIN';
+      document.querySelector('.lock-sub').textContent = 'Enter your current PIN first';
+      showLockScreen();
+    }
+    function removePIN() {
+      if (confirm('Remove PIN protection? Anyone can open the app.')) {
+        pinHash = null;
+        localStorage.removeItem('pf_pin');
+        showToast('PIN removed');
+        updatePINStatus();
+      }
+    }
+    async function fetchAllStockPrices() {
+      showToast('Fetching prices...');
+      for (let s of settings.stocks) {
+        const ticker = s.ticker;
+        let price = null;
+        const proxies = [
+          url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+          url => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+        const yahooURL = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d`;
+        for (let proxy of proxies) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const resp = await fetch(proxy(yahooURL), {signal: controller.signal});
+            clearTimeout(timeoutId);
+            if (!resp.ok) continue;
+            const text = await resp.text();
+            const json = JSON.parse(text);
+            if (json.chart?.result?.[0]?.meta?.regularMarketPrice) {
+              price = json.chart.result[0].meta.regularMarketPrice;
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        if (price) {
+          if (entries.length === 0) {
+            entries.push({
+              date: new Date().toISOString().split('T')[0],
+              amex: 0, rh: 0, boa: 0, alaska: 0, apple: 0,
+              boa0: 0, citi0: 0,
+              stockPrices: {[ticker]: price},
+              work: 0, personal: 0, cash: 0, bank: 0,
+              earned: 0, spent: 0, notes: ''
+            });
+          } else {
+            const latest = entries[entries.length - 1];
+            if (!latest.stockPrices) latest.stockPrices = {};
+            latest.stockPrices[ticker] = price;
+          }
+          const input = document.querySelector(`input[data-ticker="${ticker}"]`);
+          if (input) input.value = price.toFixed(2);
+        }
+      }
+      save();
+      showToast('Prices updated');
+      renderStockPortfolio();
+    }
+    function searchStocks(query) {
+      if (!query || query.length < 1) {
+        $('stock-search-results').classList.remove('open');
+        return;
+      }
+      const results = STOCK_TICKERS.filter(t => t.includes(query.toUpperCase())).slice(0, 5);
+      const resultsDiv = $('stock-search-results');
+      resultsDiv.innerHTML = '';
+      for (let ticker of results) {
+        const div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.innerHTML = `<div class="stock-ticker">${ticker}</div>`;
+        div.addEventListener('click', () => addStockFromSearch(ticker));
+        resultsDiv.appendChild(div);
+      }
+      resultsDiv.classList.add('open');
+    }
+    function addStockFromSearch(ticker) {
+      const existing = settings.stocks.find(s => s.ticker === ticker);
+      if (existing) {
+        showToast('Stock already added');
+        return;
+      }
+      settings.stocks.push({
+        ticker: ticker,
+        name: ticker,
+        shares: 0,
+        costBasis: 0,
+        taxRate: 20
+      });
+      save();
+      $('stock-search').value = '';
+      $('stock-search-results').classList.remove('open');
+      renderSettings();
+    }
+    function exportData() {
+      const data = {settings, entries};
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `finance-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Data exported');
+    }
+    function importData() {
+      const input = $('import-file');
+      input.click();
+    }
+    function handleFileImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (!data.settings || !data.entries) {
+            showToast('Invalid backup file');
+            return;
+          }
+          if (confirm('Replace all data with imported backup?')) {
+            settings = data.settings;
+            entries = data.entries;
+            save();
+            showToast('Data imported successfully');
+            renderDashboard();
+            renderSettings();
+          }
+        } catch (err) {
+          showToast('Error reading file');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+    // --- Stock Transaction Functions ---
+    let currentTxnType = 'buy';
+    function switchLogTab(tab) {
+      const isEntries = tab === 'entries';
+      $('log-entries-view').style.display = isEntries ? 'block' : 'none';
+      $('log-transactions-view').style.display = isEntries ? 'none' : 'block';
+      $('tab-entries').classList.toggle('active', isEntries);
+      $('tab-transactions').classList.toggle('active', !isEntries);
+      if (!isEntries) renderTransactions();
+    }
+    function openTxnModal() {
+      currentTxnType = 'buy';
+      $('txn-buy-btn').classList.add('active');
+      $('txn-sell-btn').classList.remove('active');
+      $('txnShares').value = '';
+      $('txnPrice').value = '';
+      $('txnNotes').value = '';
+      $('txnDate').value = new Date().toISOString().split('T')[0];
+      // Populate ticker dropdown
+      const sel = $('txnTicker');
+      sel.innerHTML = '';
+      for (let s of settings.stocks) {
+        const opt = document.createElement('option');
+        opt.value = s.ticker;
+        opt.textContent = `${s.ticker} — ${s.name} (${s.shares} shares)`;
+        sel.appendChild(opt);
+      }
+      $('txnModal').classList.add('open');
+    }
+    function closeTxnModal() {
+      $('txnModal').classList.remove('open');
+    }
+    function setTxnType(type) {
+      currentTxnType = type;
+      $('txn-buy-btn').classList.toggle('active', type === 'buy');
+      $('txn-sell-btn').classList.toggle('active', type === 'sell');
+    }
+    function saveTransaction() {
+      const ticker = $('txnTicker').value;
+      const shares = parseFloat($('txnShares').value);
+      const price = parseFloat($('txnPrice').value);
+      const date = $('txnDate').value;
+      const notes = $('txnNotes').value.trim();
+      if (!ticker || !shares || shares <= 0 || !price || price <= 0 || !date) {
+        showToast('Fill in all fields');
+        return;
+      }
+      // Update share count in settings
+      const stock = settings.stocks.find(s => s.ticker === ticker);
+      if (stock) {
+        if (currentTxnType === 'buy') {
+          stock.shares = Math.round((stock.shares + shares) * 1000) / 1000;
+        } else {
+          if (shares > stock.shares) {
+            showToast('Cannot sell more shares than you own');
+            return;
+          }
+          stock.shares = Math.round((stock.shares - shares) * 1000) / 1000;
+        }
+      }
+      // Record the transaction
+      transactions.push({
+        date,
+        ticker,
+        type: currentTxnType,
+        shares,
+        pricePerShare: price,
+        total: Math.round(shares * price * 100) / 100,
+        notes
+      });
+      // Sort transactions newest first
+      transactions.sort((a, b) => b.date.localeCompare(a.date));
+      save();
+      closeTxnModal();
+      renderTransactions();
+      renderSettings(); // refresh share count in settings
+      showToast(`${currentTxnType === 'buy' ? 'Bought' : 'Sold'} ${shares} ${ticker}`);
+    }
+    function deleteTransaction(idx) {
+      if (!confirm('Delete this transaction? This will NOT undo the share count change.')) return;
+      transactions.splice(idx, 1);
+      save();
+      renderTransactions();
+      showToast('Transaction deleted');
+    }
+    function renderTransactions() {
+      const el = $('txnContent');
+      if (transactions.length === 0) {
+        el.innerHTML = '<div style="text-align:center; color:var(--dim); padding:32px 0;">No transactions yet.<br>Tap "+ Log Transaction" to record a buy or sell.</div>';
+        return;
+      }
+      let html = '';
+      transactions.forEach((t, i) => {
+        const isBuy = t.type === 'buy';
+        html += `<div class="txn-item">
+          <div class="txn-item-left">
+            <div class="txn-item-ticker">${t.ticker}</div>
+            <div class="txn-item-detail">${formatDate(t.date)} &nbsp;·&nbsp; ${t.shares} shares @ $${t.pricePerShare.toFixed(2)}${t.notes ? ' &nbsp;·&nbsp; ' + t.notes : ''}</div>
+          </div>
+          <div class="txn-item-right">
+            <div class="txn-item-type ${t.type}">${isBuy ? '▲ Buy' : '▼ Sell'}</div>
+            <div class="txn-item-total" style="color:${isBuy ? 'var(--green)' : 'var(--red)'};">${isBuy ? '+' : '-'}${fmt(t.total)}</div>
+            <button onclick="deleteTransaction(${i})" style="font-size:11px; color:var(--dim); background:none; border:none; cursor:pointer; padding:2px 0;">delete</button>
+          </div>
+        </div>`;
+      });
+      el.innerHTML = html;
+    }
+    // --- End Stock Transaction Functions ---
+    function startCompare() {
+      compareMode = !compareMode;
+      const btn = $('compare-btn');
+      if (compareMode) {
+        btn.textContent = 'Cancel Compare';
+        compareSelections = [];
+        renderHistoryForCompare();
+      } else {
+        btn.textContent = 'Compare Entries';
+        compareSelections = [];
+        renderHistory();
+      }
+    }
+    function renderHistoryForCompare() {
+      if (entries.length === 0) return;
+      $('logSubtitle').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+      let html = '';
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+        const isSelected = compareSelections.includes(i);
+        const {totalDebt, totalAssets, nw} = calcEntry(entry, settings);
+        let borderColor = 'var(--border)';
+        if (i === 0) {
+          borderColor = 'var(--blue)';
+        } else {
+          const prevNW = calcEntry(entries[i - 1], settings).nw;
+          borderColor = nw >= prevNW ? 'var(--green)' : 'var(--red)';
+        }
+        const borderLeft = isSelected ? '3px solid var(--blue)' : `3px solid ${borderColor}`;
+        html += `<div class="log-entry" style="border-left: ${borderLeft}; cursor: pointer; opacity: ${isSelected ? 1 : 0.7};" onclick="selectForCompare(${i})">
+          <div class="log-date">${formatDate(entry.date)}</div>
+          <div style="font-size:13px; color:var(--dim); margin-top:6px;">${fmtNW(nw)}</div>
+          <div style="font-size:12px; color:var(--dim); margin-top:3px;">Debt: ${fmt(totalDebt)} | Assets: ${fmt(totalAssets)}</div>
+        </div>`;
+      }
+      $('logContent').innerHTML = html;
+    }
+    function selectForCompare(idx) {
+      if (compareSelections.includes(idx)) {
+        compareSelections = compareSelections.filter(i => i !== idx);
+      } else {
+        if (compareSelections.length < 2) {
+          compareSelections.push(idx);
+        } else {
+          compareSelections[1] = idx;
+        }
+      }
+      if (compareSelections.length === 2) {
+        showComparisonOverlay();
+      } else {
+        renderHistoryForCompare();
+      }
+    }
+    function showComparisonOverlay() {
+      if (compareSelections.length !== 2) return;
+      const [idx1, idx2] = compareSelections.sort((a, b) => a - b);
+      const entry1 = entries[idx1];
+      const entry2 = entries[idx2];
+      const {nw: nw1, totalDebt: debt1, totalAssets: assets1} = calcEntry(entry1, settings);
+      const {nw: nw2, totalDebt: debt2, totalAssets: assets2} = calcEntry(entry2, settings);
+      let html = `
+        <div class="compare-header">
+          <div>${formatDate(entry1.date)} → ${formatDate(entry2.date)}</div>
+          <button class="compare-close" onclick="closeComparisonOverlay()">×</button>
+        </div>
+      `;
+      const nwChange = nw2 - nw1;
+      const debtChange = debt2 - debt1;
+      const assetsChange = assets2 - assets1;
+      const fmtChange = (val) => {
+        if (val > 0) return `<span style="color:var(--green);">↑</span>`;
+        if (val < 0) return `<span style="color:var(--red);">↓</span>`;
+        return '−';
+      };
+      html += `<div class="compare-row">
+        <div class="compare-label">Net Worth</div>
+        <div class="compare-val">${fmtNW(nw1)}</div>
+        <div class="compare-arrow">${fmtChange(nwChange)}</div>
+        <div class="compare-val">${fmtNW(nw2)}</div>
+      </div>`;
+      html += `<div class="compare-row">
+        <div class="compare-label">Total Debt</div>
+        <div class="compare-val">${fmt(debt1)}</div>
+        <div class="compare-arrow">${fmtChange(-debtChange)}</div>
+        <div class="compare-val">${fmt(debt2)}</div>
+      </div>`;
+      html += `<div class="compare-row">
+        <div class="compare-label">Total Assets</div>
+        <div class="compare-val">${fmt(assets1)}</div>
+        <div class="compare-arrow">${fmtChange(assetsChange)}</div>
+        <div class="compare-val">${fmt(assets2)}</div>
+      </div>`;
+      const debtLabels = ['Amex', 'Robinhood', 'BofA APR', 'Alaska', 'Apple', 'BofA 0%', 'Citi 0%'];
+      const debtKeys = ['amex', 'rh', 'boa', 'alaska', 'apple', 'boa0', 'citi0'];
+      for (let i = 0; i < debtKeys.length; i++) {
+        const key = debtKeys[i];
+        const val1 = entry1[key] || 0;
+        const val2 = entry2[key] || 0;
+        const change = val2 - val1;
+        html += `<div class="compare-row">
+          <div class="compare-label">${debtLabels[i]}</div>
+          <div class="compare-val">${fmt(val1)}</div>
+          <div class="compare-arrow">${fmtChange(-change)}</div>
+          <div class="compare-val">${fmt(val2)}</div>
+        </div>`;
+      }
+      const assetLabels = ['Work Tab', 'Personal', 'Cash', 'Bank'];
+      const assetKeys = ['work', 'personal', 'cash', 'bank'];
+      for (let i = 0; i < assetKeys.length; i++) {
+        const key = assetKeys[i];
+        const val1 = entry1[key] || 0;
+        const val2 = entry2[key] || 0;
+        const change = val2 - val1;
+        html += `<div class="compare-row">
+          <div class="compare-label">${assetLabels[i]}</div>
+          <div class="compare-val">${fmt(val1)}</div>
+          <div class="compare-arrow">${fmtChange(change)}</div>
+          <div class="compare-val">${fmt(val2)}</div>
+        </div>`;
+      }
+      if (settings.stocks.length > 0) {
+        for (let s of settings.stocks) {
+          const ticker = s.ticker;
+          const price1 = entry1.stockPrices?.[ticker] || 0;
+          const price2 = entry2.stockPrices?.[ticker] || 0;
+          const change = price2 - price1;
+          html += `<div class="compare-row">
+            <div class="compare-label">${ticker}</div>
+            <div class="compare-val">${price1.toFixed(2)}</div>
+            <div class="compare-arrow">${fmtChange(change)}</div>
+            <div class="compare-val">${price2.toFixed(2)}</div>
+          </div>`;
+        }
+      }
+      const overlay = $('compare-overlay');
+      overlay.innerHTML = `<div class="compare-card">${html}</div>`;
+      overlay.style.display = 'flex';
+    }
+    function closeComparisonOverlay() {
+      $('compare-overlay').style.display = 'none';
+      compareMode = false;
+      compareSelections = [];
+      $('compare-btn').textContent = 'Compare Entries';
+      renderHistory();
+    }
+    function init() {
+      load();
+      renderTabs();
+      renderEntryForm();
+      renderSettings();
+      $('save-btn').addEventListener('click', saveEntry);
+      $('cancel-edit-btn').addEventListener('click', () => {
+        editingIndex = -1;
+        renderEntryForm();
+      });
+      $('copy-last-btn').addEventListener('click', prefillLast);
+      $('add-bill-btn').addEventListener('click', addBill);
+      $('set-pin-btn').addEventListener('click', setPIN);
+      $('change-pin-btn').addEventListener('click', changePIN);
+      $('remove-pin-btn').addEventListener('click', removePIN);
+      $('export-btn').addEventListener('click', exportData);
+      $('import-btn').addEventListener('click', importData);
+      $('import-file').addEventListener('change', handleFileImport);
+      $('reset-btn').addEventListener('click', () => {
+        if (confirm('Reset all data to defaults?')) {
+          settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+          entries = JSON.parse(JSON.stringify(DEFAULT_ENTRIES));
+          pinHash = null;
+          localStorage.clear();
+          showToast('Data reset');
+          location.reload();
+        }
+      });
+      $('compare-btn').addEventListener('click', startCompare);
+      $('stock-search').addEventListener('input', (e) => {
+        searchStocks(e.target.value);
+      });
+      $('stock-search').addEventListener('blur', () => {
+        setTimeout(() => { $('stock-search-results').classList.remove('open'); }, 200);
+      });
+      $('entry-stock-search').addEventListener('input', (e) => {
+        searchEntryStocks(e.target.value);
+      });
+      $('entry-stock-search').addEventListener('blur', () => {
+        setTimeout(() => { $('entry-stock-results').classList.remove('open'); }, 200);
+      });
+      // Live transaction summary while typing
+      ['entryTxnShares', 'entryTxnPrice'].forEach(id => {
+        const el = $(id);
+        if (el) el.addEventListener('input', updateEntryTxnSummary);
+      });
+      $('autoLockToggle').addEventListener('click', () => {
+        settings.autoLock = !settings.autoLock;
+        $('autoLockToggle').classList.toggle('on', settings.autoLock);
+        save();
+        if (settings.autoLock && pinHash) {
+          resetAutoLockTimer();
+        } else {
+          clearTimeout(autoLockTimer);
+        }
+      });
+      $('quick-add-btn').addEventListener('click', () => {
+        prefillLast();
+        showTab('entry');
+      });
+      $('add-txn-btn').addEventListener('click', openTxnModal);
+      // Close transaction modal on backdrop tap
+      $('txnModal').addEventListener('click', (e) => {
+        if (e.target === $('txnModal')) closeTxnModal();
+      });
+      document.querySelectorAll('.input-group input, .input-group select, .settings-item input').forEach(input => {
+        input.addEventListener('change', updateSettingsFromUI);
+      });
+      $('entryDate').addEventListener('change', () => {});
+      if (pinHash) {
+        pinLocked = true;
+        showLockScreen();
+      }
+      document.addEventListener('touchstart', resetAutoLockTimer, true);
+      document.addEventListener('click', resetAutoLockTimer, true);
+      renderDashboard();
+    }
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
